@@ -31,7 +31,7 @@ Open Gitpod (Online IDE) -> Write in Markdown and have control over fine tuning 
 
 And the best part is that I can do all of this online without having to install a single piece of software offline. I wanted to switch to an online IDE and experience its convenience and ease of use.
 
-Finally I have achieved what I have wanted. Frictionless online update of website and blog without losing the control of either the backend or the frontend (Vue Press gives me power to either write a blog using simple markdown or use javascript to do something fancy, which is actually very incredible ). 
+Finally I have achieved what I have wanted. Frictionless online update of website and blog without losing the control of either the backend or the frontend (Vue Press gives me power to either write a blog using simple markdown or use javascript to do something fancy, which is actually very incredible ).
 
 Now all I hope is to get some consistency and discipline into writing a few blogs a week
 

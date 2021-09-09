@@ -8,8 +8,6 @@ I'm a software developer by profession. My interests include reading, photograph
 
 Alumni of IIT Guwahati, India
 
-<PDF_Resume />
-
  
 [Link to my Resume](https://www.dropbox.com/s/41k3b7jnnqzdemt/Roshan_Dash_Resume.pdf?dl=0)  
 
@@ -21,3 +19,5 @@ Alumni of IIT Guwahati, India
 - My spotify playlist (Coming Up)
 
 ---
+### Resume 
+<iframe src="/assets/pdf/Roshan_Dash_Resume.pdf" type="application/pdf" width="100%" height="600"/>
