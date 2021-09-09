@@ -2,13 +2,12 @@
 title: Blog1 
 lang: en-US
 meta:
-  keywords:
-    - name: description
-      content: hello
-    - name: keywords
-      content: super duper SEO
+  - name: description
+    content: java
+  - name: keywords
+    content: backend
 ---
 
 # Blog
-Yolo so I am amazing
+Yolo, this will be a new beginning
 [Home](/)
