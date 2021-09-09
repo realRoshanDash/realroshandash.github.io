@@ -3,9 +3,10 @@ title: Blog1
 lang: en-US
 meta:
   keywords:
-    - TypeScript
-    - JavaScript
-    - Tutorial
+    - name: description
+      content: hello
+    - name: keywords
+      content: super duper SEO
 ---
 
 # Blog

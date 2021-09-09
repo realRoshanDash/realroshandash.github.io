@@ -3,7 +3,6 @@
     <div class="article" v-for="page in files">
       <a v-bind:href="page.path">{{page.title}}</a>
       <div class="keywords">
-        <span class="keyword" v-for="key in page.frontmatter.meta.keywords">{{key}}</span>
       </div>
     </div>
   </div>
