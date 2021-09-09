@@ -8,6 +8,8 @@ I'm a software developer by profession. My interests include reading, photograph
 
 Alumni of IIT Guwahati, India
 
+<PDF_Resume />
+
  
 [Link to my cv](https://www.dropbox.com/s/41k3b7jnnqzdemt/Roshan_Dash_Resume.pdf?dl=0)  
 
