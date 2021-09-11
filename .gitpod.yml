@@ -1,5 +1,8 @@
+
 ports:
 - port: 8083
+checkoutLocation: "go/src/github.com/demo-apps/go-gin-app"
+workspaceLocation: "."
 tasks:
 - name: Do npm install
   init: cd new_website && npm install
@@ -20,3 +23,6 @@ github:
     addBadge: false
     # add a label once the prebuild is ready to pull requests (defaults to false)
     addLabel: prebuilt-in-gitpod
+vscode:
+  extensions:
+    - vscodevim.vim
