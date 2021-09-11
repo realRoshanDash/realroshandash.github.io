@@ -8,6 +8,8 @@ meta:
     content: backend
   - name: category
     content: personal page
+  - name: date
+    content: 8th September 2021
 ---
 
 # Creation of this personal website/blog
