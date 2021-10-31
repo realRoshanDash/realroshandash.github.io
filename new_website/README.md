@@ -18,6 +18,6 @@ Alumni of IIT Guwahati, India
 - Books I have finished read (Coming Up)
 - My spotify playlist (Coming Up)
 
----
+<!-- ---
 ### Resume 
-<iframe src="/assets/pdf/Roshan_Dash_Resume.pdf" type="application/pdf" width="100%" height="600"/>
+<iframe src="/assets/pdf/Roshan_Dash_Resume.pdf" type="application/pdf" width="100%" height="600"/> -->
