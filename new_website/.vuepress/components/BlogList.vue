@@ -19,7 +19,6 @@ export default {
           return p.path !== "/blog/" && p.path.indexOf("/blog/") >= 0;
         })
         .sort((a, b) => {
-          console.log(a.path < b.path);
           return a.path < b.path;
         });
     },
