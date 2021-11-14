@@ -14,6 +14,6 @@ module.exports = {
       { text: "Blogs", link: "/blog/" },
     ],
     title: "Roshan Dash",
-    description: 'A personal website which includes technology, software, and everything else.',
+    description: 'A personal website which includes technology, software, motivation, productivity and everything else.',
     port: 8083
 }

@@ -16,7 +16,7 @@ meta:
 
 During my undergradute days, I never put in the effort to learn or practice vim. Because I never knew its true potential and always disregarded it as a tool used back in the olden days when gui wasn't advanced enough.
 
-But all this changed when I joined my first non intern company and then saw my senior dev who was also my reporting manager use vim to code very efficiently and effectively, and that too in IntelliJ using the IdeaVim plugin. 
+But all this changed when I joined my first non intern company and then saw my senior dev who was also my reporting manager use vim to code very efficiently and effectively, and that too in IntelliJ using the IdeaVim plugin.
 
 That following weekend, I put in 3 hours learning, exploring and training my muscle memory to use vim and I have not gone back ever since.
 
