@@ -9,7 +9,7 @@ module.exports = {
       ['script', {
           async: true,
           src: 'https://easystartup.io/js/script.js',
-          'data-api':"https://app.easystartup.io",
+          'data-api':"https://analytics.easystartup.io",
           'data-id':"62123104b47eee4041c48c91"
       }],
     ],
