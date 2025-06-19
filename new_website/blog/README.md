@@ -5,5 +5,3 @@ lang: en-US
 
 # Blogs
 [Home](/)
-
-<BlogList />

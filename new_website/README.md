@@ -14,10 +14,6 @@ Alumni of IIT Guwahati, India
 
 [Github](https://github.com/roshandash411) [LinkedIn](https://www.linkedin.com/in/roshan-dash)
 
-- [Blogs](/blog)
-- Books I want to read (Coming Up)
-- Books I have finished read (Coming Up)
-- My spotify playlist (Coming Up)
 
 <!-- ---
 ### Resume
