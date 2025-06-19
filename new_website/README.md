@@ -6,7 +6,7 @@ lang: en-US
 
 ### Who am I?
 
-I'm a two and half years experienced software developer by profession with expertise in Java, Distributed Systems, Databses, System Design ... My interests include reading, photography and coding. This website will include my blogs which include my musings and stuff I want to express.
+I'm a six years experienced software developer by profession with expertise in Java, Distributed Systems, Databses, System Design ... My interests include reading, photography and coding. This website will include my blogs which include my musings and stuff I want to express.
 
 Alumni of IIT Guwahati, India
 
