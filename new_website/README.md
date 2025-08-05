@@ -8,7 +8,7 @@ lang: en-US
 
 I'm a six years experienced software developer by profession with expertise in Java, Distributed Systems, Databses, System Design ... My interests include reading, photography and coding. This website will include my blogs which include my musings and stuff I want to express.
 
-Alumni of IIT Guwahati, India
+Alumni of IIT Guwahati, India. Currently working in Singapore 🇸🇬
 
 <!-- [Link to my Resume](https://www.dropbox.com/s/41k3b7jnnqzdemt/Roshan_Dash_Resume.pdf?dl=0)   -->
 
