@@ -1,0 +1,194 @@
+/* =========================================================================
+   Design tokens — "Swiss Precision" (design spec v2, §2)
+   One typeface, one grid, one signal. Components reference tokens only.
+
+   Theme: dark is the default (the hero experience); light is "paper". The theme
+   lives on <html data-theme>, set before first paint by the inline head script
+   in Base.astro (a stored choice, else the system preference). `.invert` is a
+   band that always takes the opposite set. The plate tokens are theme-
+   independent "mounted prints" (portrait mat, code, transcript).
+   When adding a colour token, add it to all four colour blocks.
+   ========================================================================= */
+
+/* ============ COLOUR ============ */
+
+/* DARK set — page default, and the inverted band on a light page */
+:root,
+:root[data-theme='light'] .invert {
+  color-scheme: dark;
+  /* surfaces */
+  --bg: #0b0b0c;                         /* ink */
+  --bg-raised: #141416;                  /* gate, inline code, palette selection, figures */
+  --bg-sunken: #08080a;
+  --bg-hover: rgb(242 241 236 / 0.04);
+  /* text */
+  --fg: #f2f1ec;                         /* 17.40:1 */
+  --fg-2: #a9a8a2;                       /* 8.25:1 */
+  --fg-3: #8b8a84;                       /* 5.68:1 — labels, numerals, captions, meta */
+  --fg-4: #5e5d59;                       /* disabled + decorative only, never informational */
+  /* lines */
+  --rule: rgb(242 241 236 / 0.13);
+  --rule-2: rgb(242 241 236 / 0.3);
+  --line-ui: #6a6964;                    /* ≥3:1 boundary for inputs and checkboxes */
+  --grid-line: rgb(242 241 236 / 0.045);
+  --hatch: rgb(242 241 236 / 0.34);
+  /* signal */
+  --signal: #ff5a1f;                     /* the dash: bars and fills */
+  --signal-ui: #ff5a1f;                  /* informational dots / ticks / underlines (≥3:1) */
+  --signal-text: #ff7040;                /* signal-coloured TEXT */
+  --on-signal: #0b0b0c;
+  --signal-wash: rgb(255 90 31 / 0.12);
+  /* semantic (dormant trade components, diffs, test results; always paired with a sign or glyph) */
+  --gain: #7adcc0;
+  --loss: #d9506c;
+  /* interaction */
+  --focus: #ff7040;
+  --selection-bg: #ff5a1f;
+  --selection-fg: #0b0b0c;
+  --scrim: rgb(5 5 6 / 0.74);
+  --shadow-pop: 0 30px 80px rgb(0 0 0 / 0.5);
+  --grid-tint: rgb(255 90 31 / 0.07);
+  --grid-tint-line: rgb(255 90 31 / 0.34);
+}
+
+/* LIGHT set: "paper". Page when chosen, and the inverted band on a dark page */
+:root[data-theme='light'],
+:root:not([data-theme='light']) .invert {
+  color-scheme: light;
+  --bg: #f2f1ec;                         /* paper */
+  --bg-raised: #faf9f6;
+  --bg-sunken: #e8e7e1;
+  --bg-hover: rgb(12 12 13 / 0.04);
+  --fg: #0c0c0d;
+  --fg-2: #4a4945;
+  --fg-3: #64635e;
+  --fg-4: #9c9b95;
+  --rule: rgb(12 12 13 / 0.13);
+  --rule-2: rgb(12 12 13 / 0.32);
+  --line-ui: #7f7e79;
+  --grid-line: rgb(12 12 13 / 0.055);
+  --hatch: rgb(12 12 13 / 0.38);
+  --signal: #ff5a1f;                     /* decorative bars only on paper (2.76:1) */
+  --signal-ui: #d9480f;                  /* informational marks on paper (3.80:1) */
+  --signal-text: #b83a0a;                /* 5.09:1 */
+  --on-signal: #0b0b0c;
+  --signal-wash: rgb(255 90 31 / 0.12);
+  --gain: #0b7357;
+  --loss: #6e1532;
+  --focus: #b83a0a;
+  --selection-bg: #ff5a1f;
+  --selection-fg: #0b0b0c;
+  --scrim: rgb(242 241 236 / 0.82);
+  --shadow-pop: 0 24px 64px rgb(12 12 13 / 0.18);
+  --grid-tint: rgb(217 72 15 / 0.07);
+  --grid-tint-line: rgb(217 72 15 / 0.4);
+}
+
+/* No-JS fallback only: the inline head script always sets data-theme when JS runs */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --bg: #f2f1ec; --bg-raised: #faf9f6; --bg-sunken: #e8e7e1; --bg-hover: rgb(12 12 13 / 0.04);
+    --fg: #0c0c0d; --fg-2: #4a4945; --fg-3: #64635e; --fg-4: #9c9b95;
+    --rule: rgb(12 12 13 / 0.13); --rule-2: rgb(12 12 13 / 0.32); --line-ui: #7f7e79;
+    --grid-line: rgb(12 12 13 / 0.055); --hatch: rgb(12 12 13 / 0.38);
+    --signal: #ff5a1f; --signal-ui: #d9480f; --signal-text: #b83a0a; --on-signal: #0b0b0c; --signal-wash: rgb(255 90 31 / 0.12);
+    --gain: #0b7357; --loss: #6e1532; --focus: #b83a0a; --selection-bg: #ff5a1f; --selection-fg: #0b0b0c;
+    --scrim: rgb(242 241 236 / 0.82); --shadow-pop: 0 24px 64px rgb(12 12 13 / 0.18);
+    --grid-tint: rgb(217 72 15 / 0.07); --grid-tint-line: rgb(217 72 15 / 0.4);
+  }
+  :root:not([data-theme]) .invert {
+    color-scheme: dark;
+    --bg: #0b0b0c; --bg-raised: #141416; --bg-sunken: #08080a; --bg-hover: rgb(242 241 236 / 0.04);
+    --fg: #f2f1ec; --fg-2: #a9a8a2; --fg-3: #8b8a84; --fg-4: #5e5d59;
+    --rule: rgb(242 241 236 / 0.13); --rule-2: rgb(242 241 236 / 0.3); --line-ui: #6a6964;
+    --grid-line: rgb(242 241 236 / 0.045); --hatch: rgb(242 241 236 / 0.34);
+    --signal: #ff5a1f; --signal-ui: #ff5a1f; --signal-text: #ff7040; --on-signal: #0b0b0c; --signal-wash: rgb(255 90 31 / 0.12);
+    --gain: #7adcc0; --loss: #d9506c; --focus: #ff7040; --selection-bg: #ff5a1f; --selection-fg: #0b0b0c;
+    --scrim: rgb(5 5 6 / 0.74); --shadow-pop: 0 30px 80px rgb(0 0 0 / 0.5);
+    --grid-tint: rgb(255 90 31 / 0.07); --grid-tint-line: rgb(255 90 31 / 0.34);
+  }
+}
+
+/* THEME-INDEPENDENT: the "mounted print" plate (portrait mat, code blocks, agent transcript) */
+:root {
+  --plate: #141416;
+  --plate-fg: #f2f1ec;
+  --plate-fg-2: #a9a8a2;
+  --plate-fg-3: #9a9993;
+  --plate-rule: rgb(242 241 236 / 0.14);
+  --plate-edge: rgb(242 241 236 / 0.16);
+  --plate-focus: #ff7040;
+  --plate-gain: #7adcc0;
+  --plate-loss: #d9506c;
+  /* The portrait's studio backdrop, rebuilt in CSS so the plate can frame the cut-out at any size. */
+  --portrait-backdrop: radial-gradient(80% 70% at 45% 32%,
+    #2e2e30 0%, #2a2a2c 20%, #232325 40%, #1c1c1d 60%, #141415 80%, #0b0b0c 100%);
+}
+
+.invert { background: var(--bg); color: var(--fg); }
+
+/* ============ TYPE ============ */
+:root {
+  --opsz-display: 'opsz' 32;
+  /* display sizes */
+  --fs-page: clamp(56px, 11vw, 168px);       /* inner page H1: Writing, About, Contact */
+  --fs-display: clamp(52px, 7.2vw, 112px);   /* section titles AND section numerals */
+  --fs-post: clamp(40px, 5.6vw, 88px);       /* article H1 */
+  --fs-statement: clamp(26px, 3.2vw, 50px);  /* two-tone statements, editor's letter, contact lead */
+  --fs-numeral: clamp(44px, 4.6vw, 72px);    /* stats values */
+  /* text sizes */
+  --fs-h2: clamp(28px, 2.6vw, 38px);
+  --fs-h3: clamp(21px, 1.6vw, 26px);
+  --fs-lede: clamp(17px, 1.4vw, 21px);
+  --fs-body: 17px;
+  --fs-prose: 18px;
+  --fs-small: 15px;
+  --fs-meta: 14px;
+  --fs-label: 12px;                          /* floor for any informational text */
+  --fs-mono: 13.5px;
+  --fs-mono-s: 12.5px;
+  /* leading */
+  --lh-name: 0.84; --lh-page: 0.86; --lh-display: 0.88; --lh-post: 0.96; --lh-heading: 1.08;
+  --lh-statement: 1.12; --lh-snug: 1.15; --lh-lede: 1.42; --lh-body: 1.55; --lh-prose: 1.68; --lh-label: 1.35;
+  /* tracking */
+  --tr-display: -0.05em; --tr-post: -0.045em; --tr-statement: -0.034em; --tr-h2: -0.035em;
+  --tr-heading: -0.025em; --tr-snug: -0.018em; --tr-body: -0.011em; --tr-prose: -0.014em; --tr-label: 0.08em;
+}
+@media (width < 640px) {
+  :root { --fs-body: 16px; --fs-prose: 17px; --fs-mono: 13px; }
+}
+
+/* ============ SPACE / LAYOUT ============ */
+:root {
+  /* space (4px base) */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px;
+  --space-6: 32px; --space-7: 48px; --space-8: 64px; --space-9: 96px; --space-10: 128px;
+  --section-pad: clamp(64px, 9vw, 144px);
+  --section-head-gap: clamp(40px, 5vw, 72px);
+  --stack: clamp(32px, 4vw, 56px);
+  /* layout */
+  --maxw: 1680px;
+  --margin: clamp(20px, 2.78vw, 40px);
+  --gutter: clamp(14px, 1.67vw, 24px);
+  --cols: 12;
+  --nav-h: 64px;
+  --measure: 38em;
+  /* shape: everything is square */
+  --radius: 0;
+  --radius-dot: 50%;
+  --signal-bar: 3px;
+  /* z-index */
+  --z-grid: 0;
+  --z-content: 1;
+  --z-plate-back: 1;      /* hero sandwich: studio backdrop */
+  --z-plate-type: 2;      /* hero sandwich: name + dash */
+  --z-plate-front: 3;     /* hero sandwich: cut-out */
+  --z-plate-ornament: 4;  /* frame edge, crop marks, caption */
+  --z-header: 50;
+  --z-sheet: 60;
+  --z-toast: 80;
+  --z-skip: 100;
+}
+@media (width < 1024px) { :root { --cols: 8; } }
+@media (width < 640px) { :root { --cols: 4; --nav-h: 56px; } }

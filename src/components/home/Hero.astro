@@ -1,0 +1,208 @@
+---
+/**
+ * The hero: the Dash sandwich (design spec §4.11, geometry validated in Chromium and WebKit).
+ * Everything derives from --F, the name's font size: the plate runs from the cap line of "Roshan" for 2F at the
+ * photo's own ratio, so the dash — an en dash at Inter's real metrics, drawn as ::after of "Dash" — always crosses
+ * it at 64% of the image height: the shoulder line, never the face. Layers share the .hero stacking context:
+ * backdrop (1) → name + dash (2) → cut-out (3) → frame edge, crop marks, caption (4).
+ * The page renders in its final layout; only the dash, the crop marks and the grid draw in on a session's first view.
+ */
+import { Picture } from 'astro:assets';
+import Button from '@/components/ui/Button.astro';
+import cutout from '@/assets/portrait-cutout.png';
+import { SITE } from '@/data/site';
+import { linkTo } from '@/lib/routes';
+
+interface Props {
+  hasPosts: boolean;
+}
+const { hasPosts } = Astro.props;
+const writing = linkTo('/blog/', '#writing');
+const contact = linkTo('/contact/', '#contact');
+const about = linkTo('/about/', '#about');
+---
+
+<section class="hero" aria-labelledby="hero-name">
+  <div class="wrap g hero__grid">
+    <ol class="hero__ruler" aria-hidden="true">{Array.from({ length: 12 }, (_, i) => <li>{String(i + 1).padStart(2, '0')}</li>)}</ol>
+    <dl class="hero__meta">
+      <div><dt class="label">Role</dt><dd>Software engineer</dd></div>
+      <div><dt class="label">Focus</dt><dd>Java, distributed systems, databases</dd></div>
+      <div><dt class="label">Practice</dt><dd>AI agents, agentic workflows</dd></div>
+      <div><dt class="label">Local time</dt><dd><span class="clock" data-clock>UTC+08:00</span></dd></div>
+    </dl>
+    <!-- the space between the spans matters: the accessible name must be "Roshan Dash", not "RoshanDash" -->
+    <h1 class="hero__name" id="hero-name"><span class="line">Roshan</span>{' '}<span class="line line--dash">Dash</span></h1>
+    <figure class="hero__plate" aria-labelledby="fig-01">
+      <div class="plate__clip" data-plate>
+        <div class="plate__frame">
+          <div class="plate__backdrop"></div>
+          <Picture
+            src={cutout}
+            class="plate__img"
+            widths={[380, 570, 760]}
+            sizes="(min-width: 1024px) min(27.3vw, 451px), (min-width: 640px) 46vw, 66vw"
+            formats={['avif', 'webp']}
+            fallbackFormat="webp"
+            quality={60}
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+            alt="Black-and-white portrait of Roshan Dash, head and shoulders, in a dark polo shirt."
+          />
+        </div>
+      </div>
+      <span class="crop crop--tl" aria-hidden="true"></span><span class="crop crop--tr" aria-hidden="true"></span>
+      <span class="crop crop--bl" aria-hidden="true"></span><span class="crop crop--br" aria-hidden="true"></span>
+      <figcaption class="plate__cap label" id="fig-01">Fig. 01 — {SITE.name}, {SITE.location}</figcaption>
+    </figure>
+    <div class="hero__intro">
+      <p class="t-lede hero__lede"><strong>Software engineer in {SITE.location}.</strong> I design and build backend systems, with AI agents in the loop from design to ship.</p>
+      <div class="hero__cta">
+        {hasPosts ? (
+          <>
+            <Button variant="primary" href={writing} icon="arrow-right">Read the writing</Button>
+            <Button href={contact} icon="arrow-right">Get in touch</Button>
+          </>
+        ) : (
+          <>
+            <Button variant="primary" href={contact} icon="arrow-right">Get in touch</Button>
+            <Button href={about} icon="arrow-right">About me</Button>
+          </>
+        )}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative; isolation: isolate; overflow-x: clip;
+    border-bottom: 1px solid var(--rule);
+    --F: clamp(120px, min(18.2vw, calc((100svh - 380px) / 1.68)), 300px);
+    --gap-name: clamp(32px, 4vw, 56px);
+  }
+  .hero__grid { padding-bottom: clamp(32px, 3vw, 40px); }
+
+  .hero__ruler {
+    grid-column: 1 / -1; grid-row: 1;
+    display: grid; grid-template-columns: subgrid;
+    padding-top: 16px; list-style: none;
+  }
+  .hero__ruler li {
+    padding-left: 7px;
+    font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.08em;
+    color: var(--fg-3); font-variant-numeric: tabular-nums;
+  }
+
+  .hero__meta {
+    grid-column: 1 / -1; grid-row: 2;
+    display: grid; grid-template-columns: subgrid;
+    margin-top: 12px; padding-top: 14px;
+    border-top: 1px solid var(--rule);
+  }
+  .hero__meta > div { grid-column: span 3; display: flex; flex-direction: column; gap: 6px; }
+  .hero__meta dd { font-size: 15px; line-height: 20px; font-weight: 500; letter-spacing: -0.012em; }
+  .clock { display: inline-block; min-inline-size: 9ch; font-variant-numeric: tabular-nums; }
+
+  .hero__name {
+    grid-column: 1 / 9; grid-row: 3;
+    position: relative; z-index: var(--z-plate-type);
+    margin: var(--gap-name) 0 0 -0.0543em;   /* optical alignment: the ink of R / D on the column line */
+    font-size: var(--F); line-height: 0.84; font-weight: 700; letter-spacing: -0.05em;
+    white-space: nowrap;
+    font-variation-settings: 'opsz' 32;
+  }
+  .hero__name .line { display: block; }
+  /* THE DASH */
+  .hero__name .line--dash::after {
+    content: ''; display: inline-block;
+    width: 100vw; margin-right: -100vw;   /* runs off the right edge, takes no inline space */
+    height: 0.1156em; margin-left: 0.12em;  /* Inter en-dash thickness at opsz 32 / wght 700 */
+    vertical-align: 0.2288em;               /* bottom edge; centre = .2866em above the baseline */
+    background: var(--signal);
+    transform-origin: left center;
+  }
+
+  .hero__plate {
+    grid-column: 9 / 13; grid-row: 3 / span 2;
+    justify-self: end; align-self: start;
+    position: relative;
+    margin: calc(var(--gap-name) + 0.0562 * var(--F)) 0 0;   /* = the cap line of "Roshan" */
+    height: calc(2 * var(--F));
+    aspect-ratio: 760 / 1012;
+  }
+  .plate__clip { position: absolute; inset: 0; overflow: hidden; }
+  /* native ratio; crops from the bottom when the plate is shorter */
+  .plate__frame { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 760 / 1012; }
+  .plate__backdrop { position: absolute; inset: 0; z-index: var(--z-plate-back); background: var(--portrait-backdrop); }
+  .plate__frame :global(.plate__img) {
+    position: absolute; inset: 0; z-index: var(--z-plate-front);
+    width: 100%; height: 100%;
+  }
+  /* print edge; the bar passes under it */
+  .hero__plate::after {
+    content: ''; position: absolute; inset: 0; z-index: var(--z-plate-ornament);
+    border: 1px solid var(--plate-edge);
+    pointer-events: none;
+  }
+  .plate__cap { position: absolute; z-index: var(--z-plate-ornament); left: 0; top: calc(100% + 12px); white-space: nowrap; }
+
+  .crop { position: absolute; z-index: var(--z-plate-ornament); width: 16px; height: 16px; pointer-events: none; }
+  .crop::before, .crop::after { content: ''; position: absolute; background: var(--fg-3); }
+  .crop::before { left: 0; bottom: 0; width: 16px; height: 1px; }
+  .crop::after { right: 0; top: 0; width: 1px; height: 16px; }
+  .crop--tl { left: -24px; top: -24px; }
+  .crop--tr { right: -24px; top: -24px; transform: scaleX(-1); }
+  .crop--bl { left: -24px; bottom: -24px; transform: scaleY(-1); }
+  .crop--br { right: -24px; bottom: -24px; transform: scale(-1, -1); }
+
+  .hero__intro { grid-column: 1 / 8; grid-row: 4; padding-top: clamp(24px, 2.4vw, 32px); }
+  .hero__lede { max-width: 34em; }
+  .hero__cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+
+  @media (width >= 1024px) and (height < 820px) { .hero__ruler { display: none; } }
+
+  /* tablet: stacked; plate beside the intro (bottom-aligned) */
+  @media (width < 1024px) {
+    .hero { --F: min(22vw, 200px); }
+    .hero__name { grid-column: 1 / -1; }
+    .hero__plate { grid-column: 5 / 9; grid-row: 4; margin-top: 24px; width: 100%; height: auto; }
+    .hero__intro { grid-column: 1 / 5; grid-row: 4; align-self: end; padding-top: 24px; }
+    .hero__meta > div { grid-column: span 4; }
+    .hero__meta > div:nth-child(n + 3) { display: none; }
+    .hero__ruler li:nth-child(n + 9) { display: none; }
+  }
+
+  /* phone: name → plate (cols 2–4, caption vertical in col 1) → lede → two CTAs, all inside 844px */
+  @media (width < 640px) {
+    .hero { --F: min(26.6vw, 112px); --gap-name: 20px; }
+    .hero__ruler { display: none; }
+    .hero__meta { margin-top: 0; }
+    .hero__meta > div { grid-column: span 2; }
+    .hero__meta > div:nth-child(2), .hero__meta > div:nth-child(3) { display: none; }
+    .hero__meta > div:nth-child(4) { display: flex; }
+    .hero__meta dd { font-size: 14px; }
+    .hero__plate {
+      --pw: calc(0.75 * (100vw - 2 * var(--margin)) - 0.25 * var(--gutter)); /* width of cols 2–4 */
+      grid-column: 2 / 5; grid-row: 4;
+      margin-top: 20px;
+      width: var(--pw);
+      aspect-ratio: auto;
+      height: clamp(calc(var(--pw) * 0.879), calc(100svh - 330px - 1.68 * var(--F)), calc(var(--pw) * 1.3316));
+    }
+    .plate__cap {
+      left: auto; top: auto; right: calc(100% + 10px); bottom: 0;
+      writing-mode: vertical-rl; transform: rotate(180deg);
+    }
+    .crop--tr, .crop--br { display: none; }
+    .hero__intro { grid-column: 1 / -1; grid-row: 5; padding-top: 16px; }
+    .hero__lede { font-size: 16px; line-height: 1.45; }
+    .hero__cta { margin-top: 16px; flex-wrap: nowrap; }
+    .hero__cta :global(.btn) { flex: 1 1 0; padding: 0 16px; }
+  }
+</style>
+
+<script>
+  import '@/scripts/clock.ts';
+</script>

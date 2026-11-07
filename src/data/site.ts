@@ -30,11 +30,13 @@ export const SOCIALS = [
 /**
  * Primary navigation (the logo links home). The site is professional-only: sections that have
  * no published entries (e.g. trade ideas, notes) stay out of the nav until something is published.
+ * `anchor` is the matching section on the home page; links use it until `href`'s page is built
+ * (see src/lib/routes.ts), so the nav never points at a page that doesn't exist yet.
  */
 export const NAV = [
-  { label: 'Writing', href: '/blog/' },
-  { label: 'About', href: '/about/' },
-  { label: 'Contact', href: '/contact/' },
+  { label: 'Writing', href: '/blog/', anchor: '/#writing' },
+  { label: 'About', href: '/about/', anchor: '/#about' },
+  { label: 'Contact', href: '/contact/', anchor: '/#contact' },
 ] as const;
 
 export const TRADE_DISCLAIMER =

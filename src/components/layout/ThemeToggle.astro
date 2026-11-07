@@ -1,0 +1,32 @@
+---
+/** Dark ⇄ light switch (design spec §4.4). The label names the action; theme.ts keeps it in sync. */
+import Icon from '@/components/ui/Icon.astro';
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<button class:list={['icon-btn', 'theme-toggle', className]} type="button" data-theme-toggle aria-label="Switch to light theme">
+  <Icon name="theme" size={18} class="theme-toggle__icon" />
+</button>
+
+<style>
+  .icon-btn {
+    position: relative;
+    width: 36px; height: 36px;
+    display: inline-grid; place-items: center;
+    border: 1px solid var(--rule-2);
+    color: var(--fg);
+    transition: border-color var(--dur-2) linear;
+  }
+  .icon-btn::before { content: ''; position: absolute; inset: -4px; } /* 44px hit area */
+  .icon-btn:hover { border-color: var(--fg); }
+  @media (pointer: coarse) { .icon-btn { width: 40px; height: 40px; } }
+  .theme-toggle :global(.theme-toggle__icon) { transition: transform var(--dur-4) var(--ease-out); }
+  :global(:root[data-theme='light']) .theme-toggle :global(.theme-toggle__icon) { transform: rotate(180deg); }
+</style>
+
+<script>
+  import '@/scripts/theme.ts';
+</script>

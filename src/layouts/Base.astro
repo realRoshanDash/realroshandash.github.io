@@ -1,6 +1,9 @@
 ---
 import { Font } from 'astro:assets';
 import { SITE } from '@/data/site';
+import SiteHeader from '@/components/layout/SiteHeader.astro';
+import SiteFooter from '@/components/layout/SiteFooter.astro';
+import GridOverlay from '@/components/layout/GridOverlay.astro';
 import '@/styles/global.css';
 
 interface Props {
@@ -9,8 +12,10 @@ interface Props {
   image?: string;
   type?: 'website' | 'article';
   noindex?: boolean;
+  /** Reading-progress bar in the header (posts). */
+  progress?: boolean;
 }
-const { title, description = SITE.description, image = '/og/default.png', type = 'website', noindex = false } = Astro.props;
+const { title, description = SITE.description, image = '/og/default.png', type = 'website', noindex = false, progress = false } = Astro.props;
 const fullTitle = title ? `${title} — ${SITE.title}` : `${SITE.name} — Software engineer in Singapore`;
 const canonical = new URL(Astro.url.pathname, SITE.url).href;
 const ogImage = new URL(image, SITE.url).href;
@@ -20,13 +25,25 @@ const ogImage = new URL(image, SITE.url).href;
 <html lang={SITE.lang}>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Before any stylesheet: theme (stored choice, else the system), .js, and .intro-seen after the first page of a session. -->
+    <script is:inline>
+      (function () {
+        var d = document.documentElement, t = null;
+        try { t = localStorage.getItem('rd-theme'); } catch (e) {}
+        if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        d.dataset.theme = t;
+        d.classList.add('js');
+        try { if (sessionStorage.getItem('rd-intro')) d.classList.add('intro-seen'); sessionStorage.setItem('rd-intro', '1'); } catch (e) {}
+      })();
+    </script>
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex" />}
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#07080a" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F2F1EC" media="(prefers-color-scheme: light)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="alternate" type="application/rss+xml" title={SITE.name} href="/rss.xml" />
@@ -45,14 +62,20 @@ const ogImage = new URL(image, SITE.url).href;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
     <meta name="author" content={SITE.name} />
-    <Font cssVariable="--font-sans" preload />
-    <Font cssVariable="--font-serif" preload />
+    <Font cssVariable="--font-sans" preload={[{ style: 'normal' }]} />
     <Font cssVariable="--font-mono" />
     <slot name="head" />
   </head>
   <body>
-    <a class="skip-link" href="#main">Skip to content</a>
-    <slot />
-    <div class="grain" aria-hidden="true"></div>
+    <a class="skip" href="#main">Skip to content</a>
+    <GridOverlay />
+    <SiteHeader progress={progress} />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <SiteFooter />
+    <script>
+      import '@/scripts/reveal.ts';
+    </script>
   </body>
 </html>

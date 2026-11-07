@@ -1,0 +1,14 @@
+---
+/**
+ * The visible layout grid: 13 hairlines on the live 12 / 8 / 4 columns, fixed behind the content (design spec
+ * §2.5, §3.8). Bands that paint their own background repeat it with `local`.
+ */
+interface Props {
+  local?: boolean;
+}
+const { local = false } = Astro.props;
+---
+
+<div class:list={['gridlines', { 'gridlines--local': local }]} aria-hidden="true">
+  <div class="wrap g">{Array.from({ length: 12 }, (_, i) => <i style={`--i:${i}`}></i>)}</div>
+</div>

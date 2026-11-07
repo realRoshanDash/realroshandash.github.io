@@ -7,17 +7,44 @@ import { satteri } from '@astrojs/markdown-satteri';
 import satteriCallouts from 'satteri-callouts';
 import { SITE } from './src/data/site.ts';
 
+const LATIN =
+  'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,' +
+  'U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
+
 // https://docs.astro.build/en/reference/configuration-reference/
 export default defineConfig({
   site: SITE.url,
   trailingSlash: 'ignore',
   build: { format: 'directory' },
   prefetch: { prefetchAll: true, defaultStrategy: 'hover' },
-  // Self-hosted at build time with metric-matched fallbacks (no layout shift, no third-party requests).
+  // Self-hosted from pinned Fontsource npm packages: no network at build time, metric-matched fallbacks, no layout
+  // shift. Inter is the only family people read: one variable file carries the weight axis (100–900) and the
+  // optical-size axis (opsz 14–32). Italic downloads only where italic text renders. JetBrains Mono is reserved
+  // for what machines say (code, routes, hashes).
   fonts: [
-    { provider: fontProviders.fontsource(), name: 'Inter Tight', cssVariable: '--font-sans', weights: ['300 900'], styles: ['normal'], subsets: ['latin'], fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'] },
-    { provider: fontProviders.fontsource(), name: 'Instrument Serif', cssVariable: '--font-serif', weights: [400], styles: ['normal', 'italic'], subsets: ['latin'], fallbacks: ['ui-serif', 'Georgia', 'serif'] },
-    { provider: fontProviders.fontsource(), name: 'JetBrains Mono', cssVariable: '--font-mono', weights: ['400 600'], styles: ['normal'], subsets: ['latin'], fallbacks: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'] },
+    {
+      provider: fontProviders.local(),
+      name: 'Inter',
+      cssVariable: '--font-sans',
+      fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'],
+      options: {
+        variants: [
+          { weight: '100 900', style: 'normal', display: 'swap', unicodeRange: [LATIN], src: ['@fontsource-variable/inter/files/inter-latin-opsz-normal.woff2'] },
+          { weight: '100 900', style: 'italic', display: 'swap', unicodeRange: [LATIN], src: ['@fontsource-variable/inter/files/inter-latin-wght-italic.woff2'] },
+        ],
+      },
+    },
+    {
+      provider: fontProviders.local(),
+      name: 'JetBrains Mono',
+      cssVariable: '--font-mono',
+      fallbacks: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      options: {
+        variants: [
+          { weight: 400, style: 'normal', display: 'swap', unicodeRange: [LATIN], src: ['@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2'] },
+        ],
+      },
+    },
   ],
   markdown: {
     // Sätteri is Astro 7's native Markdown pipeline; callouts use Obsidian/GitHub syntax: > [!NOTE]
