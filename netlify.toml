@@ -1,0 +1,10 @@
+# Netlify build for roshandash.com (Astro static site).
+# Headers and redirects live in public/_headers and public/_redirects so they apply
+# no matter which netlify.toml Netlify reads (see new_website/README.md).
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+  NPM_FLAGS = "--no-audit --no-fund"

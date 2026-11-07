@@ -1,7 +1,318 @@
 ---
-import { getCollection, render } from 'astro:content';
-const [post] = await getCollection('blog', (p) => p.id === 'from-hating-vim-to-loving-it');
-const { Content } = await render(post);
+import { Image } from 'astro:assets';
+import Base from '@/layouts/Base.astro';
+import { SITE, SOCIALS } from '@/data/site';
+import cutout from '@/assets/portrait-cutout.png';
+
+const tape = ['Java', 'Distributed systems', 'System design', 'Databases', 'US equities', 'Momentum', 'Breadth', 'Reading', 'Photography', 'IIT Guwahati', 'Singapore'];
+const year = new Date().getFullYear();
 ---
-<html lang="en"><head><meta charset="utf-8" /><title>scaffold</title></head><body><Content />
-<div id="md-test"></div></body></html>
+
+<Base>
+  <header class="nav wrap">
+    <a class="brand" href="/" aria-label="Roshan Dash — home">
+      <span class="mark" aria-hidden="true">RD</span>
+      <span class="brand-name">Roshan Dash</span>
+    </a>
+    <nav aria-label="Primary">
+      <ul>
+        <li><a href="#work">Writing</a></li>
+        <li><a href="#work">Trade Ideas</a></li>
+        <li><a href="#building">Building</a></li>
+        <li><a class="pill" href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-name">
+      <div class="glow" aria-hidden="true"><span></span><span></span></div>
+      <div class="wrap hero-inner">
+        <p class="eyebrow mono reveal" style="--d: 0ms">
+          <span class="status-dot" data-clock-dot></span>
+          <span data-clock>NYSE · market clock</span>
+        </p>
+
+        <h1 id="hero-name" class="name" aria-label="Roshan Dash">
+          <span class="line reveal" style="--d: 80ms" aria-hidden="true">Roshan</span>
+          <span class="line line-2 reveal" style="--d: 160ms" aria-hidden="true">Dash</span>
+        </h1>
+
+        <figure class="portrait reveal-up" style="--d: 220ms">
+          <Image
+            src={cutout}
+            alt="Roshan Dash in a navy velvet blazer, smiling"
+            widths={[380, 560, 760]}
+            sizes="(max-width: 760px) 92vw, 560px"
+            loading="eager"
+            fetchpriority="high"
+            format="webp"
+          />
+        </figure>
+
+        <div class="intro reveal" style="--d: 320ms">
+          <p class="lede serif">Engineer by trade.<br /><em>Trader</em> by night.</p>
+          <p class="sub">
+            Software engineer in {SITE.location} — Java, distributed systems, databases and system design.
+            When New York opens, it's 9:30&nbsp;pm here: I trade US equities, build my own market tooling,
+            and write about systems, markets and the craft.
+          </p>
+          <div class="ctas">
+            <a class="btn btn-primary" href="#work">See what's here <span aria-hidden="true">→</span></a>
+            <a class="btn btn-ghost" href="#contact">Get in touch</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="tape" aria-hidden="true">
+      <div class="tape-track">
+        {[0, 1].map(() => (
+          <ul>
+            {tape.map((t) => (
+              <li><span class="tick">◆</span>{t}</li>
+            ))}
+          </ul>
+        ))}
+      </div>
+    </div>
+
+    <section id="work" class="section wrap" aria-labelledby="work-title">
+      <header class="section-head">
+        <p class="mono kicker">Index</p>
+        <h2 id="work-title">Writing, trade ideas &amp; <span class="serif"><em>everything else</em></span></h2>
+      </header>
+      <div class="bento">
+        <article class="card card-lg" data-spot>
+          <p class="mono num">01 — Writing</p>
+          <h3>Essays on systems, markets and the craft</h3>
+          <p>Long-form notes on distributed systems, Java, system design and the tools I build — with code, diagrams and the occasional strong opinion.</p>
+          <p class="mono state"><span class="dot dot-amber"></span>First essays in the works</p>
+        </article>
+        <article class="card" data-spot>
+          <p class="mono num">02 — Trade ideas</p>
+          <h3>A public trading journal</h3>
+          <p>Setups with entry, stop and targets, risk in R, status from watching to closed — and an honest track record.</p>
+          <div class="ladder" aria-hidden="true">
+            <span class="lvl t">T2 <b>+3.0R</b></span>
+            <span class="lvl t">T1 <b>+2.0R</b></span>
+            <span class="lvl e">Entry</span>
+            <span class="lvl s">Stop <b>−1.0R</b></span>
+          </div>
+          <p class="mono state"><span class="dot dot-amber"></span>Journal opens soon</p>
+        </article>
+        <article id="building" class="card" data-spot>
+          <p class="mono num">03 — Building</p>
+          <h3>Nexus</h3>
+          <p>My personal command center for trading, health and reminders — a Spring Boot + vanilla JS web app, a SwiftUI iPhone/iPad app, and a Telegram bot driven by a Claude tool-use agent.</p>
+          <p class="mono state"><span class="dot dot-green"></span>In daily use · private</p>
+        </article>
+        <article class="card card-wide" data-spot>
+          <p class="mono num">04 — About</p>
+          <h3>Backend engineer, <span class="serif"><em>chart-reader</em></span>, IIT Guwahati alum</h3>
+          <p>Based in Singapore 🇸🇬. Off the clock: reading, photography, and far too many charts.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="contact" class="section wrap contact" aria-labelledby="contact-title">
+      <p class="mono kicker">Contact</p>
+      <h2 id="contact-title" class="big">Let's <span class="serif"><em>talk</em></span>.</h2>
+      <p class="sub">The quickest way to reach me today is LinkedIn. A verified contact card — email and more, unlocked by a quick human check — ships in the next update.</p>
+      <div class="ctas">
+        {SOCIALS.map((s) => (
+          <a class="btn btn-ghost" href={s.href} rel="me noopener" target="_blank">{s.label} <span aria-hidden="true">↗</span></a>
+        ))}
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer wrap">
+    <p>© {year} {SITE.name} · Singapore</p>
+    <p class="mono"><span data-sgt>SGT</span></p>
+  </footer>
+</Base>
+
+<style>
+  /* ---------- nav ---------- */
+  .nav { position: relative; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1.25rem; }
+  .brand { display: inline-flex; align-items: center; gap: 0.7rem; text-decoration: none; font-weight: 600; letter-spacing: -0.01em; }
+  .mark { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 0.7rem; background: var(--text); color: var(--bg); font-weight: 800; font-size: 0.85rem; letter-spacing: -0.04em; }
+  .nav ul { display: flex; align-items: center; gap: clamp(0.5rem, 2vw, 1.75rem); margin: 0; padding: 0; list-style: none; }
+  .nav a:not(.brand) { color: var(--text-2); text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
+  .nav a:not(.brand):hover { color: var(--text); }
+  .nav .pill { color: var(--text) !important; padding: 0.5rem 1rem; border: 1px solid var(--line-strong); border-radius: 999px; }
+  .nav .pill:hover { border-color: var(--accent); }
+  @media (max-width: 720px) {
+    .brand-name { display: none; }
+    .nav li:not(:last-child) { display: none; }
+  }
+
+  /* ---------- hero ---------- */
+  .hero { position: relative; isolation: isolate; min-height: min(100svh, 980px); margin-top: -5.5rem; padding-top: 5.5rem; overflow: clip; }
+  .hero-inner { position: relative; display: grid; grid-template-columns: 1fr; min-height: inherit; padding-block: 4.5rem 3rem; }
+  .glow span { position: absolute; z-index: -1; border-radius: 50%; filter: blur(80px); animation: drift 18s var(--ease-out) infinite alternate; }
+  .glow span:first-child { width: 46vw; height: 46vw; left: 38%; top: 18%; background: var(--glow-2); }
+  .glow span:last-child { width: 30vw; height: 30vw; left: 58%; top: 42%; background: var(--glow-1); animation-delay: -6s; }
+  @keyframes drift { from { transform: translate3d(-4%, -2%, 0) scale(1); } to { transform: translate3d(4%, 3%, 0) scale(1.12); } }
+
+  .eyebrow { display: inline-flex; align-items: center; gap: 0.6rem; margin: 0 0 1.5rem; color: var(--text-2); z-index: 3; position: relative; }
+  .status-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 0 currentColor; }
+  .status-dot[data-phase='open'] { background: var(--up); color: rgb(61 220 132 / 0.5); animation: pulse 2s infinite; }
+  .status-dot[data-phase='pre'], .status-dot[data-phase='post'] { background: #f5b84c; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 currentColor; } 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+  .name { position: relative; z-index: 1; margin: 0; font-weight: 800; text-transform: uppercase; line-height: 0.8; letter-spacing: -0.065em; font-size: clamp(5.5rem, 19.5vw, 19.5rem); }
+  .name .line { display: block; background: linear-gradient(180deg, #f6f4ee 30%, rgb(246 244 238 / 0.55)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .name .line-2 { padding-left: 0.42em; background: linear-gradient(180deg, rgb(246 244 238 / 0.9), rgb(246 244 238 / 0.18)); -webkit-background-clip: text; background-clip: text; }
+
+  .portrait { position: absolute; z-index: 2; margin: 0; right: max(0px, calc(50% - 38rem)); bottom: 0; width: clamp(18rem, 40vw, 35rem); pointer-events: none; }
+  .portrait::before { content: ''; position: absolute; inset: 18% 8% 10%; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, rgb(200 245 80 / 0.22), transparent 70%); filter: blur(30px); }
+  .portrait :global(img) { width: 100%; height: auto; -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 98%); mask-image: linear-gradient(180deg, #000 72%, transparent 98%); filter: drop-shadow(0 30px 60px rgb(0 0 0 / 0.55)); }
+
+  .intro { position: relative; z-index: 3; align-self: end; max-width: 34rem; margin-top: 2.5rem; }
+  .lede { margin: 0 0 1rem; font-size: clamp(2.2rem, 4vw, 3.6rem); line-height: 0.98; }
+  .lede em { color: var(--accent); }
+  .sub { margin: 0; color: var(--text-2); max-width: 36rem; }
+  .ctas { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
+  .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.85rem 1.3rem; border-radius: 999px; font-weight: 600; font-size: 0.98rem; text-decoration: none; transition: transform 0.25s var(--ease-out), background 0.2s, border-color 0.2s; }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-ghost { border: 1px solid var(--line-strong); background: rgb(255 255 255 / 0.02); backdrop-filter: blur(6px); }
+  .btn-ghost:hover { border-color: var(--text-2); }
+
+  @media (max-width: 760px) {
+    .hero { min-height: auto; }
+    .hero-inner { padding-block: 3rem 2rem; }
+    .name { font-size: 24vw; }
+    .portrait { position: relative; right: auto; justify-self: center; width: min(88vw, 26rem); margin-top: -12vw; }
+    .intro { margin-top: -2.5rem; }
+    .glow span:first-child { width: 90vw; height: 90vw; left: 5%; top: 25%; }
+    .glow span:last-child { width: 60vw; height: 60vw; left: 30%; top: 45%; }
+  }
+
+  /* entrance */
+  .reveal, .reveal-up { opacity: 0; animation: rise 1s var(--ease-out) var(--d, 0ms) forwards; }
+  .reveal-up { animation-name: rise-up; animation-duration: 1.3s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(22px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes rise-up { from { opacity: 0; transform: translateY(60px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+  /* ---------- tape ---------- */
+  .tape { position: relative; overflow: hidden; border-block: 1px solid var(--line); background: var(--bg-elev); padding-block: 1rem; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+  .tape-track { display: flex; width: max-content; animation: marquee 48s linear infinite; }
+  .tape ul { display: flex; gap: 2.5rem; margin: 0; padding: 0 1.25rem; list-style: none; font-family: var(--mono); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.08em; color: var(--text-2); white-space: nowrap; }
+  .tape li { display: inline-flex; align-items: center; gap: 0.9rem; }
+  .tick { color: var(--accent); font-size: 0.6rem; }
+  @keyframes marquee { to { transform: translateX(-50%); } }
+
+  /* ---------- sections ---------- */
+  .section { padding-block: clamp(4.5rem, 10vw, 8rem); }
+  .section-head { margin-bottom: 2.5rem; }
+  .kicker { margin: 0 0 0.9rem; color: var(--accent); }
+  h2 { margin: 0; font-size: clamp(2.1rem, 5vw, 4rem); line-height: 1; letter-spacing: -0.04em; font-weight: 700; max-width: 18ch; }
+  h2 .serif, h3 .serif { font-weight: 400; letter-spacing: -0.01em; }
+
+  .bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; }
+  .card { --x: 50%; --y: 0%; position: relative; grid-column: span 4; display: flex; flex-direction: column; gap: 0.75rem; padding: 1.75rem; border: 1px solid var(--line); border-radius: var(--radius); background: radial-gradient(600px circle at var(--x) var(--y), rgb(200 245 80 / 0.07), transparent 40%), var(--bg-card); overflow: hidden; transition: border-color 0.3s, transform 0.4s var(--ease-out); }
+  .card:hover { border-color: var(--line-strong); transform: translateY(-3px); }
+  .card-lg { grid-column: span 4; }
+  .card-wide { grid-column: span 12; }
+  .card h3 { margin: 0; font-size: clamp(1.35rem, 2vw, 1.7rem); line-height: 1.12; letter-spacing: -0.03em; font-weight: 650; }
+  .card p { margin: 0; color: var(--text-2); }
+  .card .num { color: var(--muted); }
+  .card .state { margin-top: auto; padding-top: 1rem; color: var(--text-2); display: inline-flex; align-items: center; gap: 0.55rem; }
+  .dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; display: inline-block; }
+  .dot-amber { background: #f5b84c; }
+  .dot-green { background: var(--up); }
+  .ladder { display: grid; gap: 0.35rem; margin-block: 0.4rem 0; font-family: var(--mono); font-size: 0.74rem; }
+  .lvl { display: flex; justify-content: space-between; padding: 0.38rem 0.7rem; border-radius: 6px; border-left: 2px solid; background: rgb(255 255 255 / 0.03); color: var(--text-2); }
+  .lvl b { font-weight: 600; }
+  .lvl.t { border-color: var(--up); } .lvl.t b { color: var(--up); }
+  .lvl.e { border-color: var(--text); color: var(--text); }
+  .lvl.s { border-color: var(--down); } .lvl.s b { color: var(--down); }
+  @media (max-width: 960px) { .card, .card-lg { grid-column: span 6; } .card-lg { grid-column: span 12; } }
+  @media (max-width: 640px) { .card, .card-lg, .card-wide { grid-column: span 12; } }
+
+  .contact { text-align: left; }
+  .big { font-size: clamp(3.2rem, 11vw, 9rem); max-width: none; letter-spacing: -0.06em; }
+  .contact .sub { margin-top: 1.25rem; max-width: 40rem; }
+
+  .footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; padding-block: 2rem 2.5rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+  .footer p { margin: 0; }
+</style>
+
+<script>
+  // ---- NYSE clock (v0; holiday-aware for the next few weeks; replaced by the full session model) ----
+  const HOLIDAYS: Record<string, string> = {
+    '2026-11-26': 'Thanksgiving', '2026-12-25': 'Christmas', '2027-01-01': "New Year's Day",
+    '2027-01-18': 'MLK Day', '2027-02-15': "Presidents' Day", '2027-03-26': 'Good Friday',
+  };
+  const EARLY_CLOSE = new Set(['2026-11-27', '2026-12-24']);
+  const ny = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'short', hourCycle: 'h23' });
+  const sgt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const sgtDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Singapore', weekday: 'short' });
+
+  function parts(d: Date) {
+    const p = Object.fromEntries(ny.formatToParts(d).map((x) => [x.type, x.value]));
+    return { ymd: `${p.year}-${p.month}-${p.day}`, y: +p.year, m: +p.month, d: +p.day, min: +p.hour * 60 + +p.minute, wd: p.weekday };
+  }
+  // Wall-clock time in New York → instant (US offset is -5h or -4h; correct by the observed difference).
+  function etInstant(y: number, m: number, d: number, minutes: number) {
+    const guess = Date.UTC(y, m - 1, d, 5, 0) + minutes * 60000;
+    let diff = (((parts(new Date(guess)).min - minutes) % 1440) + 1440) % 1440;
+    if (diff > 720) diff -= 1440;
+    return new Date(guess - diff * 60000);
+  }
+  const isTradingDay = (p: ReturnType<typeof parts>) => p.wd !== 'Sat' && p.wd !== 'Sun' && !HOLIDAYS[p.ymd];
+  const closeMin = (p: ReturnType<typeof parts>) => (EARLY_CLOSE.has(p.ymd) ? 13 * 60 : 16 * 60);
+
+  function nextOpen(now: Date) {
+    for (let i = 0; i < 10; i++) {
+      const p = parts(new Date(now.getTime() + i * 86400000));
+      if (!isTradingDay(p)) continue;
+      const open = etInstant(p.y, p.m, p.d, 9 * 60 + 30);
+      if (open > now) return open;
+    }
+    return null;
+  }
+  const dur = (ms: number) => {
+    const m = Math.max(0, Math.round(ms / 60000));
+    const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mm = m % 60;
+    return d ? `${d}d ${h}h` : h ? `${h}h ${mm}m` : `${mm}m`;
+  };
+
+  function tick() {
+    const now = new Date();
+    const p = parts(now);
+    const label = document.querySelector('[data-clock]');
+    const dot = document.querySelector<HTMLElement>('[data-clock-dot]');
+    const s = document.querySelector('[data-sgt]');
+    if (s) s.textContent = `${sgt.format(now)} SGT · Singapore`;
+    if (!label || !dot) return;
+    let phase = 'closed';
+    let text: string;
+    if (isTradingDay(p) && p.min >= 570 && p.min < closeMin(p)) {
+      phase = 'open';
+      text = `NYSE open · closes in ${dur(etInstant(p.y, p.m, p.d, closeMin(p)).getTime() - now.getTime())}`;
+    } else {
+      const o = nextOpen(now);
+      if (isTradingDay(p) && p.min >= 240 && p.min < 570) phase = 'pre';
+      else if (isTradingDay(p) && p.min >= closeMin(p) && p.min < 1200) phase = 'post';
+      const why = HOLIDAYS[p.ymd] ? ` (${HOLIDAYS[p.ymd]})` : phase === 'pre' ? ' · pre-market' : phase === 'post' ? ' · after-hours' : '';
+      text = o ? `NYSE closed${why} · opens ${sgtDay.format(o)} ${sgt.format(o)} SGT · in ${dur(o.getTime() - now.getTime())}` : 'NYSE closed';
+    }
+    label.textContent = text;
+    dot.dataset.phase = phase;
+  }
+  tick();
+  setInterval(tick, 30000);
+
+  // pointer spotlight on cards
+  for (const el of document.querySelectorAll<HTMLElement>('[data-spot]')) {
+    el.addEventListener('pointermove', (e) => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--x', `${e.clientX - r.left}px`);
+      el.style.setProperty('--y', `${e.clientY - r.top}px`);
+    });
+  }
+</script>
