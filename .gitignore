@@ -20,3 +20,10 @@ contact.local.json
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# agent worktrees / local Claude Code state
+.claude/worktrees/
+.claude/settings.local.json
+
+# Netlify base-directory shim output
+new_website/dist/
