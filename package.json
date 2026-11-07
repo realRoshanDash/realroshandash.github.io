@@ -16,7 +16,8 @@
     "seal-contact": "node scripts/seal-contact.mjs",
     "new:post": "node scripts/new-entry.mjs post",
     "new:trade": "node scripts/new-entry.mjs trade",
-    "new:note": "node scripts/new-entry.mjs note"
+    "new:note": "node scripts/new-entry.mjs note",
+    "make-icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-satteri": "^0.4.7",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
+    "@fontsource/inter": "5.3.0",
     "pagefind": "^1.6.0",
     "typescript": "^6.0.3"
   }

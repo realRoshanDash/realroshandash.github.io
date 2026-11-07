@@ -4,21 +4,28 @@ import { SITE } from '@/data/site';
 import SiteHeader from '@/components/layout/SiteHeader.astro';
 import SiteFooter from '@/components/layout/SiteFooter.astro';
 import GridOverlay from '@/components/layout/GridOverlay.astro';
+import CommandPalette from '@/components/palette/CommandPalette.astro';
+import { ogImageFor } from '@/lib/og';
 import '@/styles/global.css';
 
 interface Props {
   title?: string;
   description?: string;
+  /** Open Graph image (site-relative). Default: the page's own card from src/lib/og.ts, else the site card. */
   image?: string;
+  imageAlt?: string;
   type?: 'website' | 'article';
+  /** Also keeps the page out of the site search index. */
   noindex?: boolean;
   /** Reading-progress bar in the header (posts). */
   progress?: boolean;
 }
-const { title, description = SITE.description, image = '/og/default.png', type = 'website', noindex = false, progress = false } = Astro.props;
+const { title, description = SITE.description, type = 'website', noindex = false, progress = false } = Astro.props;
 const fullTitle = title ? `${title} — ${SITE.title}` : `${SITE.name} — Software engineer in Singapore`;
 const canonical = new URL(Astro.url.pathname, SITE.url).href;
-const ogImage = new URL(image, SITE.url).href;
+const card = Astro.props.image ? { src: Astro.props.image, alt: Astro.props.imageAlt ?? fullTitle } : await ogImageFor(Astro.url.pathname);
+const ogImage = new URL(card.src, SITE.url).href;
+const ogImageAlt = Astro.props.imageAlt ?? card.alt;
 ---
 
 <!doctype html>
@@ -44,8 +51,10 @@ const ogImage = new URL(image, SITE.url).href;
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#F2F1EC" media="(prefers-color-scheme: light)" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="alternate" type="application/rss+xml" title={SITE.name} href="/rss.xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <meta property="og:type" content={type} />
@@ -54,13 +63,16 @@ const ogImage = new URL(image, SITE.url).href;
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogImage} />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={ogImageAlt} />
     <meta property="og:locale" content="en_SG" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
     <meta name="author" content={SITE.name} />
     <Font cssVariable="--font-sans" preload={[{ style: 'normal' }]} />
     <Font cssVariable="--font-mono" />
@@ -70,10 +82,12 @@ const ogImage = new URL(image, SITE.url).href;
     <a class="skip" href="#main">Skip to content</a>
     <GridOverlay />
     <SiteHeader progress={progress} />
-    <main id="main" tabindex="-1">
+    <!-- Site search indexes <main> only (header, footer and palette stay out); noindex pages stay out entirely. -->
+    <main id="main" tabindex="-1" data-pagefind-body={noindex ? undefined : ''}>
       <slot />
     </main>
     <SiteFooter />
+    <CommandPalette />
     <script>
       import '@/scripts/reveal.ts';
     </script>

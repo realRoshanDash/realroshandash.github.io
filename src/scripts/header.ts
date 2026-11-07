@@ -31,7 +31,7 @@ onScroll();
 
 /* ---- ⌘K / Ctrl+K: hand off to the palette (palette-bridge.ts) ---- */
 const platform = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform;
-if (/Mac|iPhone|iPad/.test(platform)) for (const kbd of document.querySelectorAll('[data-kbd]')) kbd.textContent = '⌘K';
+if (/mac|iphone|ipad/i.test(platform)) for (const kbd of document.querySelectorAll('[data-kbd]')) kbd.textContent = '⌘K'; // "macOS" in userAgentData
 for (const button of document.querySelectorAll('[data-open-palette]')) {
   button.addEventListener('click', () => {
     setMenu(false, false);

@@ -65,6 +65,14 @@ export const toggleTheme = (): void => setTheme(currentTheme() === 'dark' ? 'lig
 
 syncControls(currentTheme());
 for (const button of document.querySelectorAll('[data-theme-toggle]')) button.addEventListener('click', toggleTheme);
+// The ⌘K palette is a separately loaded module: it asks by event, so this module stays the only one that sets themes.
+addEventListener('theme:request', (event) => {
+  const want = (event as CustomEvent<'toggle' | 'system'>).detail;
+  if (want !== 'toggle' && want !== 'system') return;
+  event.preventDefault();
+  if (want === 'system') useSystemTheme();
+  else toggleTheme();
+});
 systemLight.addEventListener('change', () => {
   if (!stored()) apply(system());
 });
