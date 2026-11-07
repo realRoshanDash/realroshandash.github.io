@@ -1,0 +1,255 @@
+---
+/**
+ * A post (design spec §5.3): crumb, title (it morphs from the list title), lede, meta row; an optional cover; the
+ * article on the 12-column grid with hanging section numbers and the sticky contents in cols 10–12 (a collapsed
+ * <details> below 1024px); then the back page. Pages exist only for visible posts: published ones, and drafts in
+ * dev and SHOW_DRAFTS=1 previews (noindex, with a DRAFT badge).
+ */
+import { render } from 'astro:content';
+import { getImage, Image, Picture } from 'astro:assets';
+import Base from '@/layouts/Base.astro';
+import Toc, { type TocItem } from '@/components/writing/Toc.astro';
+import BackPage from '@/components/writing/BackPage.astro';
+import Figure from '@/components/writing/Figure.astro';
+import PullQuote from '@/components/writing/PullQuote.astro';
+import avatar from '@/assets/avatar.jpg';
+import { getPostItems, jsonLd, WRITING_FEED, type PostItem } from '@/components/writing/posts';
+import { absoluteUrl, adjacent, related } from '@/lib/content';
+import { linkTo } from '@/lib/routes';
+import { lsbStyle } from '@/lib/optical';
+import { SITE } from '@/data/site';
+
+export async function getStaticPaths() {
+  const items = await getPostItems();
+  return items.map((item) => ({ params: { id: item.id }, props: { item, items } }));
+}
+
+interface Props {
+  item: PostItem;
+  items: PostItem[];
+}
+const { item, items } = Astro.props;
+const { post } = item;
+const { title, description, cover, coverAlt } = post.data;
+const { Content, headings } = await render(post);
+
+// Contents: h2 and h3, numbered like the CSS counters in prose.css (1, 1.1, 2). The Markdown pipeline makes a
+// post's top heading level h2 (src/lib/markdown/normalize-headings.ts); the GFM footnotes label is not a section.
+let h2 = 0;
+let h3 = 0;
+const toc: TocItem[] = headings
+  .filter((heading) => (heading.depth === 2 || heading.depth === 3) && heading.slug !== 'footnote-label')
+  .map((heading) => {
+    if (heading.depth === 2) {
+      h2 += 1;
+      h3 = 0;
+      return { ...heading, n: String(h2) };
+    }
+    h3 += 1;
+    return { ...heading, n: `${h2}.${h3}` };
+  });
+const hasToc = toc.length >= 3;
+
+// Back page: older and newer by date; related by shared tags, leaving out those two (one view-transition name each)
+const { prev, next } = adjacent(items, item.id);
+const pair = new Set([prev?.id, next?.id]);
+const relatedItems = related(
+  item.post,
+  items.filter((other) => !pair.has(other.id)).map((other) => other.post),
+).map((post) => items.find((other) => other.id === post.id)!);
+
+const firstTag = item.tags[0];
+// The space before the dot doesn't break, so a wrapped line never starts with a separator
+const TAG_SEPARATOR = '\u00a0· ';
+const contact = linkTo('/contact/', '/#contact');
+
+// Cover: 16:10, or 4:5 for an upright photo, which would otherwise lose most of the frame
+const upright = cover ? cover.height > cover.width : false;
+const ogImage = cover ? (await getImage({ src: cover, width: 1200, height: 630, fit: 'cover', format: 'jpg', quality: 80 })).src : undefined;
+
+const url = absoluteUrl(item.href);
+const ld = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: title,
+  description,
+  url,
+  mainEntityOfPage: url,
+  datePublished: item.iso,
+  dateModified: item.updatedIso ?? item.iso,
+  inLanguage: SITE.lang,
+  author: { '@type': 'Person', name: SITE.name, url: SITE.url },
+  ...(item.tags.length ? { keywords: item.tags.map((tag) => tag.label).join(', ') } : {}),
+  ...(ogImage ? { image: absoluteUrl(ogImage) } : {}),
+};
+---
+
+<Base title={title} description={description} type="article" image={ogImage} progress noindex={item.draft}>
+  <Fragment slot="head">
+    <meta property="article:published_time" content={item.iso} />
+    {item.updatedIso && <meta property="article:modified_time" content={item.updatedIso} />}
+    {item.tags.map((tag) => <meta property="article:tag" content={tag.label} />)}
+    <link rel="alternate" type="application/rss+xml" title={`${SITE.name} — Writing`} href={WRITING_FEED} />
+    <script type="application/ld+json" set:html={jsonLd(ld)} />
+  </Fragment>
+
+  <article class="post" data-pagefind-body>
+    <header class="post-head wrap">
+      <div class="post-head__top" data-pagefind-ignore>
+        <nav class="crumb" aria-label="Breadcrumb">
+          <ol class="label" role="list">
+            <li><a href="/blog/">Writing</a></li>
+            {firstTag && <li><a href={firstTag.href}>{firstTag.label}</a></li>}
+            {item.no !== undefined && <li aria-current="page">No. {item.noLabel}</li>}
+          </ol>
+        </nav>
+        {item.draft && <span class="badge"><span class="badge__hatch" aria-hidden="true"></span>Draft</span>}
+      </div>
+
+      <div class="g">
+        <h1 class="post-head__title t-post" style={[`view-transition-name: ${item.vt}`, lsbStyle(title)].filter(Boolean).join(';')}>{item.title}</h1>
+        <p class="post-head__lede t-lede">{item.description}</p>
+        {item.archived && (
+          <p class="post-head__archive" data-pagefind-ignore>
+            <span class="label">From the archive</span>{' '}First published in {item.year} on the previous version of this site.
+          </p>
+        )}
+      </div>
+
+      <div class="post-meta" data-pagefind-ignore>
+        <p class="post-meta__author">
+          <Image src={avatar} alt="" width={40} height={40} densities={[1, 2]} class="post-meta__avatar" />
+          <span><span class="post-meta__name">{SITE.name}</span><span class="post-meta__place">{SITE.location}</span></span>
+        </p>
+        <dl class="post-meta__cells">
+          <div>
+            <dt class="label">Published</dt>
+            <dd><time datetime={item.iso} data-pagefind-meta={`date:${item.iso}`}>{item.iso}</time></dd>
+          </div>
+          {item.updatedIso && (
+            <div>
+              <dt class="label">Updated</dt>
+              <dd><time datetime={item.updatedIso}>{item.updatedIso}</time></dd>
+            </div>
+          )}
+          <div>
+            <dt class="label">Reading time</dt>
+            <dd data-pagefind-meta={`minutes:${item.minutes}`}>{item.minutes} min</dd>
+          </div>
+          {item.tags.length > 0 && (
+            <div class="post-meta__tags">
+              <dt class="label">Tags</dt>
+              <dd>
+                {item.tags.map((tag, i) => (
+                  <>{i > 0 && <span class="post-meta__sep" aria-hidden="true">{TAG_SEPARATOR}</span>}<a href={tag.href} data-pagefind-filter={`tag:${tag.slug}`}>{tag.label}</a></>
+                ))}
+              </dd>
+            </div>
+          )}
+        </dl>
+      </div>
+
+      {hasToc && <Toc items={toc} variant="details" />}
+    </header>
+
+    {cover && (
+      <figure class:list={['post-cover wrap', { 'post-cover--upright': upright }]}>
+        <div class="g">
+          <div class="post-cover__frame">
+            <Picture
+              src={cover}
+              alt={coverAlt ?? ''}
+              widths={[640, 960, 1280, 1600]}
+              sizes="(min-width: 1024px) 60vw, 100vw"
+              formats={['avif', 'webp']}
+              quality={75}
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+        </div>
+      </figure>
+    )}
+
+    <div class="wrap">
+      <div class:list={['g post-body', { 'post-body--solo': !hasToc }]}>
+        <!-- the contents come first in reading and tab order; the grid puts them in cols 10–12 -->
+        {hasToc && <Toc items={toc} variant="aside" rss={WRITING_FEED} />}
+        <div class="prose">
+          <Content components={{ Figure, PullQuote }} />
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <BackPage prev={prev} next={next} related={relatedItems} contact={contact} rss={WRITING_FEED} />
+</Base>
+
+<style>
+  /* ---------- head ---------- */
+  .post-head { padding-top: clamp(28px, 4vw, 56px); }
+  .post-head__top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+  .crumb ol { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; list-style: none; }
+  .crumb li + li::before { content: '/'; margin-right: 10px; color: var(--fg-4); }
+  .crumb a { display: inline-flex; align-items: center; min-height: 32px; transition: color var(--dur-2) linear; }
+  .crumb a:hover { color: var(--fg); }
+  .crumb [aria-current] { color: var(--fg-2); }
+
+  .post-head__title { grid-column: 1 / 11; margin-top: clamp(18px, 2vw, 28px); }
+  .post-head__lede { grid-column: 3 / 11; margin-top: clamp(16px, 2vw, 24px); max-width: 36em; }
+  .post-head__archive { grid-column: 3 / 11; margin-top: 16px; font-size: 14px; line-height: 1.5; color: var(--fg-2); }
+  .post-head__archive .label { margin-right: 8px; color: var(--fg); }
+
+  /* meta row: between rules, a label over a value per cell */
+  .post-meta {
+    display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); column-gap: var(--gutter); row-gap: 16px;
+    align-items: center;
+    margin-top: clamp(32px, 4vw, 56px); padding-block: 14px;
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  }
+  .post-meta__author { grid-column: 1 / 3; display: flex; align-items: center; gap: 12px; }
+  .post-meta__author :global(.post-meta__avatar) { width: 40px; height: 40px; flex: none; object-fit: cover; }
+  .post-meta__author > span { display: grid; }
+  .post-meta__name { font-size: 14px; font-weight: 600; line-height: 1.35; }
+  .post-meta__place { font-size: 12.5px; line-height: 1.35; color: var(--fg-3); }
+  .post-meta__cells { grid-column: 3 / 13; display: flex; flex-wrap: wrap; gap: 12px var(--gutter); }
+  .post-meta__cells > div {
+    display: grid; gap: 3px; align-content: start;
+    min-width: calc(2 * (100% - 9 * var(--gutter)) / 10 + var(--gutter));
+  }
+  .post-meta__cells dd { font-size: 14px; font-weight: 550; font-variant-numeric: tabular-nums; }
+  .post-meta__tags { flex: 1; }
+  .post-meta__tags a {
+    white-space: nowrap;
+    text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: transparent;
+    transition: color var(--dur-2) linear, text-decoration-color var(--dur-2) linear;
+  }
+  .post-meta__tags a:hover { color: var(--signal-text); text-decoration-color: var(--signal-ui); }
+  .post-meta__sep { color: var(--fg-3); }
+
+  .post-head :global(.toc-mobile) { margin-top: 0; }
+
+  /* ---------- cover ---------- */
+  .post-cover { margin-top: clamp(32px, 4vw, 56px); }
+  .post-cover__frame { grid-column: 3 / 11; aspect-ratio: 16 / 10; overflow: hidden; border: 1px solid var(--rule); background: var(--bg-raised); }
+  .post-cover--upright .post-cover__frame { grid-column: 3 / 8; aspect-ratio: 4 / 5; }
+  .post-cover__frame :global(picture) { display: block; height: 100%; }
+  .post-cover__frame :global(img) { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+  /* ---------- body ---------- */
+  .post-body { margin-top: clamp(40px, 4.4vw, 64px); padding-bottom: clamp(64px, 7vw, 112px); align-items: start; }
+
+  @media (width < 1024px) {
+    .post-head__title, .post-head__lede, .post-head__archive { grid-column: 1 / -1; }
+    .post-meta__author { grid-column: 1 / -1; }
+    .post-meta__cells { grid-column: 1 / -1; }
+    .post-meta__cells > div { min-width: calc(25% - var(--gutter)); }
+    .post-cover__frame, .post-cover--upright .post-cover__frame { grid-column: 1 / -1; }
+    .post-cover--upright .post-cover__frame { aspect-ratio: 4 / 5; max-height: 80svh; }
+  }
+  @media (width < 640px) {
+    .post-meta__cells { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px var(--gutter); }
+    .post-meta__cells > div { min-width: 0; }
+    .post-meta__tags { grid-column: 1 / -1; }
+  }
+</style>

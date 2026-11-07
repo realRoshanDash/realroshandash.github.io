@@ -1,0 +1,62 @@
+---
+/**
+ * A list of posts (design spec §4.12, §5.2): rows on the page grid, optionally under a column header (desktop) and
+ * grouped by year. The empty state is PostListEmpty.astro; callers choose it when there is nothing to list.
+ */
+import PostRow from './PostRow.astro';
+import { byYear, type PostItem } from './posts';
+
+interface Props {
+  items: PostItem[];
+  /** Heading level of each row title */
+  as?: 'h2' | 'h3' | 'h4';
+  /** Group under year headings (one level above the rows) */
+  years?: boolean;
+  /** Column header row on desktop: No. · Date / Title / Tags / Min */
+  columns?: boolean;
+  /** Scroll reveals on the rows (spec §3.4) */
+  reveal?: boolean;
+  /** Carry view-transition names (off when the same posts are linked elsewhere on the page with names) */
+  morph?: boolean;
+}
+const { items, as = 'h3', years = false, columns = false, reveal = false, morph = true } = Astro.props;
+const yearAs = as === 'h4' ? 'h3' : 'h2';
+const YearHeading = yearAs;
+const groups = years ? byYear(items) : [{ year: '', items }];
+---
+
+<div class:list={['posts', { 'posts--years': years }]}>
+  {columns && (
+    <div class="posts__cols label" aria-hidden="true">
+      <span class="c-no">No. · Date</span><span class="c-title">Title</span><span class="c-tags">Tags</span><span class="c-min">Min</span>
+    </div>
+  )}
+  {groups.map((group) => (
+    <>
+      {years && <YearHeading class="posts__year label" data-reveal={reveal ? 0 : undefined}>{group.year}</YearHeading>}
+      <ol class="post-list" role="list">
+        {group.items.map((item, i) => <PostRow item={item} as={as} reveal={reveal ? Math.min(i, 4) : undefined} morph={morph} />)}
+      </ol>
+    </>
+  ))}
+</div>
+
+<style>
+  .posts { border-bottom: 1px solid var(--rule); }
+  .posts__cols {
+    display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); column-gap: var(--gutter);
+    padding-bottom: 12px;
+  }
+  .posts__cols .c-no { grid-column: 1 / 3; }
+  .posts__cols .c-title { grid-column: 3 / 9; }
+  .posts__cols .c-tags { grid-column: 9 / 11; }
+  .posts__cols .c-min { grid-column: 11 / 13; justify-self: end; }
+
+  /* a year is a ruled group header, as in a printed index */
+  .posts__year { margin: 0; padding: 28px 0 12px; border-top: 1px solid var(--rule-2); }
+  .posts__year:first-of-type, .posts__cols + .posts__year { padding-top: 14px; }
+
+  @media (width < 1024px) {
+    .posts__cols { display: none; }
+  }
+</style>

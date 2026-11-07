@@ -1,0 +1,20 @@
+---
+/**
+ * "Copy link" (copy deck §7.4): copies the page's canonical URL; the label reads "Link copied" for two seconds and
+ * a polite status message says the same. Hidden without JS, since it needs the clipboard.
+ */
+import Icon from '@/components/ui/Icon.astro';
+
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<button type="button" class:list={['copy-link', className]} data-copy-link data-requires-js>
+  <span data-copy-label>Copy link</span><Icon name="copy" />
+</button>
+
+<script>
+  import './copy-link.ts';
+</script>

@@ -1,0 +1,116 @@
+---
+/**
+ * The back page of a post (design spec §5.3, graft from acid-editorial): "Thanks for reading.", a row of ways to
+ * respond, the previous and next posts by date, and related posts by shared tags. Not part of the article, so
+ * search ignores it.
+ */
+import Icon from '@/components/ui/Icon.astro';
+import CopyLink from './CopyLink.astro';
+import PostList from './PostList.astro';
+import type { PostItem } from './posts';
+import { lsbStyle } from '@/lib/optical';
+
+interface Props {
+  /** The older post */
+  prev?: PostItem;
+  /** The newer post */
+  next?: PostItem;
+  related: PostItem[];
+  contact: string;
+  rss: string;
+}
+const { prev, next, related, contact, rss } = Astro.props;
+const title = 'Thanks for reading.';
+---
+
+<section class="back-page" aria-labelledby="back-page-title" data-pagefind-ignore>
+  <div class="wrap">
+    <div class="g back-page__head">
+      <h2 class="t-display back-page__title" id="back-page-title" style={lsbStyle(title)}>{title}</h2>
+      <ul class="back-page__links" role="list">
+        <li><a class="arrow-link" href={contact}>Questions or corrections? Write to me<Icon name="arrow-right" /></a></li>
+        <li><a class="arrow-link" href={rss}>Subscribe via RSS<Icon name="rss" /></a></li>
+        <li><CopyLink class="arrow-link" /></li>
+      </ul>
+    </div>
+
+    {(prev || next) && (
+      <nav class="pager" aria-label="More writing">
+        {prev && (
+          <a class="pager__link pager__link--prev" href={prev.href} rel="prev">
+            <span class="pager__dir label"><Icon name="arrow-right" class="pager__back" />Previous</span>{' '}
+            <span class="pager__title t-h3" style={`view-transition-name: ${prev.vt}`}><span class="pager__u">{prev.title}</span></span>{' '}
+            <time class="label" datetime={prev.iso}>{prev.iso}</time>
+          </a>
+        )}
+        {next && (
+          <a class="pager__link pager__link--next" href={next.href} rel="next">
+            <span class="pager__dir label">Next<Icon name="arrow-right" /></span>{' '}
+            <span class="pager__title t-h3" style={`view-transition-name: ${next.vt}`}><span class="pager__u">{next.title}</span></span>{' '}
+            <time class="label" datetime={next.iso}>{next.iso}</time>
+          </a>
+        )}
+      </nav>
+    )}
+
+    {related.length > 0 && (
+      <div class="related">
+        <h3 class="related__title label">Related</h3>
+        <PostList items={related} as="h4" />
+      </div>
+    )}
+  </div>
+</section>
+
+<style>
+  .back-page { padding-block: 64px var(--section-pad); border-top: 1px solid var(--rule-2); }
+  .back-page__head { row-gap: 28px; align-items: end; }
+  .back-page__title { grid-column: 1 / 9; }
+  .back-page__links { grid-column: 9 / 13; display: grid; gap: 14px; justify-items: start; padding-bottom: 8px; }
+
+  .pager {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--gutter);
+    margin-top: clamp(48px, 5vw, 72px);
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  }
+  .pager__link {
+    position: relative;
+    display: grid; align-content: start; gap: 10px;
+    padding: 22px 0 26px;
+  }
+  .pager__link--next { grid-column: 2; text-align: right; justify-items: end; }
+  /* the same signal top rule as a post row */
+  .pager__link::before {
+    content: ''; position: absolute; left: 0; right: 0; top: -1px;
+    height: var(--signal-bar); background: var(--signal-ui);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform var(--dur-5) var(--ease-out);
+  }
+  .pager__link--next::before { transform-origin: right; }
+  .pager__link:hover::before, .pager__link:focus-visible::before { transform: scaleX(1); }
+  .pager__link:focus-visible { outline-offset: 4px; }
+  .pager__dir { display: inline-flex; align-items: center; gap: 8px; }
+  .pager__dir :global(.icon) { width: 14px; height: 14px; transition: transform var(--dur-4) var(--ease-out); }
+  .pager__dir :global(.pager__back) { transform: scaleX(-1); }
+  .pager__link--prev:hover :global(.pager__back) { transform: scaleX(-1) translateX(4px); }
+  .pager__link--next:hover :global(.icon) { transform: translateX(4px); }
+  .pager__title { max-width: 24em; }
+  .pager__u {
+    background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+    transition: background-size var(--dur-4) var(--ease-out);
+  }
+  .pager__link:hover .pager__u { background-size: 100% 1px; }
+
+  .related { margin-top: clamp(48px, 5vw, 72px); }
+  .related__title { padding-bottom: 12px; }
+
+  @media (width < 1024px) {
+    .back-page__title, .back-page__links { grid-column: 1 / -1; }
+  }
+  @media (width < 640px) {
+    .back-page { padding-top: 48px; }
+    .pager { grid-template-columns: minmax(0, 1fr); }
+    .pager__link--next { grid-column: 1; text-align: left; justify-items: start; border-top: 1px solid var(--rule); }
+    .pager__link--next::before { transform-origin: left; }
+  }
+</style>

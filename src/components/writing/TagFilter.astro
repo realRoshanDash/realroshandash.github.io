@@ -1,0 +1,64 @@
+---
+/**
+ * Tag filter (design spec §5.2, §5.4): a row of chip *links*, "All" plus one per tag with its count, most used
+ * first. It works without JS because every chip is a page. Wraps on desktop; on phones it scrolls sideways
+ * with snap points and a fade at the right edge.
+ */
+import type { TagSummary } from '@/lib/content';
+import { tagHref, tagLabel } from './posts';
+
+interface Props {
+  /** Every visible post */
+  total: number;
+  tags: TagSummary[];
+  /** Slug of the tag page being shown; none on /blog */
+  current?: string;
+}
+const { total, tags, current } = Astro.props;
+const posts = (n: number) => (n === 1 ? ' post' : ' posts');
+---
+
+<nav class="tag-filter" aria-label="Tags" data-pagefind-ignore>
+  <ul class="tag-filter__list" role="list">
+    <li>
+      <a class="chip" href="/blog/" aria-current={current ? undefined : 'page'}>
+        All{' '}<span class="count">{total}<span class="sr-only">{posts(total)}</span></span>
+      </a>
+    </li>
+    {tags.map((tag) => (
+      <li>
+        <a class="chip" href={tagHref(tag.slug)} aria-current={tag.slug === current ? 'page' : undefined}>
+          {tagLabel(tag.tag)}{' '}<span class="count">{tag.count}<span class="sr-only">{posts(tag.count)}</span></span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .tag-filter { border-top: 1px solid var(--rule-2); border-bottom: 1px solid var(--rule); }
+  /* positioned: the visually hidden counts stay inside the list (and its scroller on phones) */
+  .tag-filter__list { position: relative; display: flex; flex-wrap: wrap; gap: 8px; padding-block: 16px; }
+  .chip { white-space: nowrap; }
+  .chip .count { font-size: 12px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  .chip[aria-current='page'] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .chip[aria-current='page'] .count { color: var(--bg); opacity: 0.7; }
+
+  /* below 1024px there is no column header, so the first row's own rule closes the filter */
+  @media (width < 1024px) {
+    .tag-filter { border-bottom: 0; }
+  }
+  @media (width < 640px) {
+    /* one row that scrolls sideways, edge to edge, with a 24px fade at the right */
+    .tag-filter__list {
+      flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain;
+      margin-inline: calc(-1 * var(--margin)); padding-inline: var(--margin);
+      scroll-snap-type: x proximity; scroll-padding-inline: var(--margin);
+      scrollbar-width: none;
+      mask-image: linear-gradient(90deg, black calc(100% - 24px), transparent);
+    }
+    .tag-filter__list::-webkit-scrollbar { display: none; }
+    .tag-filter__list li { flex: none; scroll-snap-align: start; }
+    .tag-filter__list li:last-child { padding-right: 24px; }
+  }
+</style>

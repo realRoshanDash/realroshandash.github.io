@@ -1,0 +1,59 @@
+---
+/**
+ * Head of a writing index (design spec §5.2, §5.4): the real route in mono, an optional eyebrow, the page title in
+ * .t-page (cols 1–8) and an aside with the description and the RSS link (cols 9–12).
+ *
+ * The title is fitted to its column in pure CSS: --len is the longest word in characters, so a long tag name
+ * ("Distributed systems") steps down from --fs-page instead of overflowing. Nothing is measured at runtime.
+ */
+import Icon from '@/components/ui/Icon.astro';
+import { lsbStyle } from '@/lib/optical';
+import { longestWord } from './posts';
+
+interface Props {
+  /** The page's route as shown, e.g. "/blog" or "/blog/tags/java" */
+  route: string;
+  title: string;
+  /** Label above the title, e.g. "Tag · 3 posts" */
+  eyebrow?: string;
+  desc?: string;
+  rss: string;
+}
+const { route, title, eyebrow, desc, rss } = Astro.props;
+---
+
+<header class="index-head">
+  <div class="wrap">
+    <p class="index-head__route mono">{route}</p>
+    <div class="g index-head__grid">
+      <div class="index-head__title" style={`--len:${longestWord(title)}`}>
+        {eyebrow && <p class="label index-head__eyebrow">{eyebrow}</p>}
+        <h1 class="t-page" style={lsbStyle(title)}>{title}</h1>
+      </div>
+      <div class="index-head__aside">
+        {desc && <p class="index-head__desc">{desc}</p>}
+        <p><a class="arrow-link" href={rss}>RSS feed<Icon name="rss" /></a></p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<style>
+  .index-head { padding-top: clamp(28px, 4vw, 56px); }
+  .index-head__route { color: var(--fg-3); margin-bottom: clamp(20px, 2.6vw, 36px); }
+  .index-head__grid { align-items: end; row-gap: 24px; }
+  .index-head__title { grid-column: 1 / 9; container-type: inline-size; }
+  .index-head__eyebrow { margin-bottom: 14px; }
+  /* Fit: never wider than the column. 0.6em is a safe advance per character for Inter 700 at -0.05em. */
+  .index-head__title h1 {
+    font-size: min(var(--fs-page), calc(100cqi / (var(--len, 7) * 0.6)));
+    overflow-wrap: break-word;
+  }
+  .index-head__aside { grid-column: 9 / 13; display: grid; gap: 16px; justify-items: start; padding-bottom: 8px; }
+  .index-head__desc { max-width: 30em; font-size: 15px; line-height: 1.5; color: var(--fg-2); }
+
+  @media (width < 1024px) {
+    .index-head__title { grid-column: 1 / -1; }
+    .index-head__aside { grid-column: 1 / -1; padding-bottom: 0; }
+  }
+</style>

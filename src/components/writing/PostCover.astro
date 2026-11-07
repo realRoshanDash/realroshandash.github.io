@@ -1,0 +1,79 @@
+---
+/**
+ * A post's cover (design spec §4.12): the post's own cover image when it has one (astro:assets, AVIF/WebP), else
+ * a generative "spec" plate with no stock imagery: the post number in thin numerals followed by the dash, the
+ * number and first tag above, minutes and date below, framed by crop marks. 16:10 either way.
+ */
+import { Picture } from 'astro:assets';
+import type { PostItem } from './posts';
+
+interface Props {
+  item: PostItem;
+  /** `sizes` for the cover image */
+  sizes?: string;
+}
+const { item, sizes = '(min-width: 1024px) 50vw, 100vw' } = Astro.props;
+const { cover, coverAlt } = item.post.data;
+const kicker = [`No. ${item.noLabel}`, item.tags[0]?.label].filter(Boolean).join(' · ');
+---
+
+{cover ? (
+  <div class="cover cover--image">
+    <Picture
+      src={cover}
+      alt={coverAlt ?? ''}
+      widths={[480, 720, 960, 1280]}
+      sizes={sizes}
+      formats={['avif', 'webp']}
+      quality={70}
+    />
+  </div>
+) : (
+  <div class="cover cover--spec" aria-hidden="true">
+    <span class="crop crop--tl"></span><span class="crop crop--tr"></span>
+    <span class="crop crop--bl"></span><span class="crop crop--br"></span>
+    <p class="cover__top label">{kicker}</p>
+    <p class="cover__no">{item.noLabel}</p>
+    <p class="cover__foot label"><span>{item.minutes} min</span><span>{item.iso}</span></p>
+  </div>
+)}
+
+<style>
+  .cover { position: relative; aspect-ratio: 16 / 10; border: 1px solid var(--rule); background: var(--bg-raised); }
+  .cover--image { overflow: hidden; }
+  .cover--image :global(picture) { display: block; height: 100%; }
+  .cover--image :global(img) { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+  .cover--spec {
+    container-type: size;
+    display: grid; grid-template-rows: auto 1fr auto; align-items: center;
+    padding: clamp(14px, 4.5cqw, 24px);
+    color: var(--fg-2);
+  }
+  .cover__no {
+    font-size: 38cqh; font-weight: 200; line-height: 1; letter-spacing: -0.05em;
+    font-variation-settings: var(--opsz-display);
+    color: var(--fg); font-variant-numeric: tabular-nums;
+    margin-left: -0.035em;
+  }
+  /* the dash runs out of the number */
+  .cover__no::after {
+    content: ''; display: inline-block; vertical-align: 0.25em;
+    width: 0.6em; height: 0.07em; margin-left: 0.12em;
+    background: var(--signal);
+  }
+  .cover__foot { display: flex; justify-content: space-between; gap: 12px; }
+
+  /* crop marks (§4.11), 12px */
+  .crop { position: absolute; width: 12px; height: 12px; pointer-events: none; }
+  .crop::before, .crop::after { content: ''; position: absolute; background: var(--fg-3); }
+  .crop::before { left: 0; bottom: 0; width: 12px; height: 1px; }
+  .crop::after { right: 0; top: 0; width: 1px; height: 12px; }
+  .crop--tl { left: -18px; top: -18px; }
+  .crop--tr { right: -18px; top: -18px; transform: scaleX(-1); }
+  .crop--bl { left: -18px; bottom: -18px; transform: scaleY(-1); }
+  .crop--br { right: -18px; bottom: -18px; transform: scale(-1, -1); }
+  @media (width < 640px) {
+    .crop { display: none; }
+  }
+</style>

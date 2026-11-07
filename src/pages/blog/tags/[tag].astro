@@ -1,0 +1,50 @@
+---
+/**
+ * Tag page (design spec §5.4): the /blog layout for one tag. Generated only for tags that published posts carry
+ * (drafts count only in previews), so it is never empty. "All" in the chip row leads back to /blog.
+ * The list is grouped by year only when there are more than five posts.
+ */
+import Base from '@/layouts/Base.astro';
+import IndexHead from '@/components/writing/IndexHead.astro';
+import TagFilter from '@/components/writing/TagFilter.astro';
+import PostList from '@/components/writing/PostList.astro';
+import { getPostItems, tagLabel, WRITING_FEED } from '@/components/writing/posts';
+import { getTags, type TagSummary } from '@/lib/content';
+import { pluralize } from '@/lib/format';
+import { SITE } from '@/data/site';
+
+export async function getStaticPaths() {
+  const tags = await getTags('blog');
+  return tags.map((tag) => ({ params: { tag: tag.slug }, props: { tag } }));
+}
+
+interface Props {
+  tag: TagSummary;
+}
+const { tag } = Astro.props;
+const all = await getPostItems();
+const items = all.filter((item) => item.tags.some((ref) => ref.slug === tag.slug));
+const tags = await getTags('blog');
+const label = tagLabel(tag.tag);
+const grouped = items.length > 5;
+---
+
+<Base
+  title={`${label} · Writing`}
+  description={`${pluralize(items.length, 'post')} tagged “${label}”: long-form notes by ${SITE.name}, a software engineer in ${SITE.location}.`}
+>
+  <link slot="head" rel="alternate" type="application/rss+xml" title={`${SITE.name} — Writing`} href={WRITING_FEED} />
+  <IndexHead route={`/blog/tags/${tag.slug}`} eyebrow={`Tag · ${pluralize(items.length, 'post')}`} title={label} rss={WRITING_FEED} />
+  <div class="wrap writing">
+    <TagFilter total={all.length} tags={tags} current={tag.slug} />
+    <PostList items={items} as={grouped ? 'h3' : 'h2'} years={grouped} columns reveal />
+  </div>
+</Base>
+
+<style>
+  .writing { margin-top: var(--section-head-gap); padding-bottom: var(--section-pad); }
+  .writing :global(.posts) { margin-top: 40px; }
+  @media (width < 1024px) {
+    .writing :global(.posts) { margin-top: 4px; }
+  }
+</style>

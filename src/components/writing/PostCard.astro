@@ -1,0 +1,90 @@
+---
+/**
+ * Featured card (design spec §4.12): /blog only, at most one, for a post with `featured: true`. A 16:10 cover in
+ * cols 1–6, the kicker, title, description and date in cols 7–12; the whole card is the link. Same signal top rule
+ * on hover as a post row. The post also stays in the list below, which carries its view-transition name.
+ */
+import Icon from '@/components/ui/Icon.astro';
+import PostCover from './PostCover.astro';
+import type { PostItem } from './posts';
+
+interface Props {
+  item: PostItem;
+  as?: 'h2' | 'h3';
+}
+const { item, as: Heading = 'h2' } = Astro.props;
+const kicker = [item.tags[0]?.label, `${item.minutes} min`].filter(Boolean).join(' · ');
+---
+
+<article class="post-card">
+  <div class="post-card__cover">
+    <PostCover item={item} sizes="(min-width: 1024px) 46vw, 100vw" />
+  </div>
+  <div class="post-card__body">
+    <p class="label">{kicker}</p>
+    <Heading class="post-card__title">
+      <a href={item.href}>{item.title}</a>
+      {(item.archived || item.draft) && (
+        <span class="post-card__badges">
+          {item.archived && <span class="badge badge--plain">From the archive</span>}
+          {item.draft && <span class="badge"><span class="badge__hatch" aria-hidden="true"></span>Draft</span>}
+        </span>
+      )}
+    </Heading>
+    <p class="post-card__desc">{item.description}</p>
+    <p class="post-card__meta">
+      <time class="label" datetime={item.iso}>{item.iso}</time>
+      <span class="post-card__go" aria-hidden="true">Read the post<Icon name="arrow-right" /></span>
+    </p>
+  </div>
+</article>
+
+<style>
+  .post-card {
+    position: relative;
+    display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    column-gap: var(--gutter); row-gap: 24px;
+    padding: 32px 0 clamp(40px, 4vw, 56px);
+  }
+  /* The card's top rule is the one above it (the tag filter's); on hover the signal bar draws along it. */
+  .post-card::before {
+    content: ''; position: absolute; left: 0; right: 0; top: -1px;
+    height: var(--signal-bar); background: var(--signal-ui);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform var(--dur-5) var(--ease-out);
+  }
+  .post-card:hover::before, .post-card:focus-within::before { transform: scaleX(1); }
+  .post-card__cover { grid-column: 1 / 7; }
+  .post-card__body { grid-column: 7 / 13; display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
+  .post-card__title {
+    font-size: clamp(28px, 2.6vw, 40px); font-weight: 650; line-height: 1.08; letter-spacing: -0.03em;
+    font-variation-settings: var(--opsz-display);
+  }
+  .post-card__title a {
+    background: linear-gradient(currentColor, currentColor) 0 100% / 0 2px no-repeat;
+    transition: background-size var(--dur-4) var(--ease-out);
+  }
+  .post-card:hover .post-card__title a { background-size: 100% 2px; }
+  .post-card__title a::after { content: ''; position: absolute; inset: 0; }
+  .post-card__title a:focus-visible { outline: none; }
+  .post-card:has(a:focus-visible) { outline: 2px solid var(--focus); outline-offset: 4px; }
+  .post-card__badges {
+    display: inline-flex; gap: 6px; margin-left: 12px; white-space: nowrap;
+    vertical-align: middle; position: relative; top: -0.08em;
+  }
+  .post-card__desc { max-width: 34em; font-size: 17px; line-height: 1.5; color: var(--fg-2); }
+  .post-card__meta {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    margin-top: auto; padding-top: 16px; border-top: 1px solid var(--rule);
+  }
+  .post-card__go { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 550; }
+  .post-card__go :global(.icon) { width: 14px; height: 14px; transition: transform var(--dur-4) var(--ease-out); }
+  .post-card:hover .post-card__go :global(.icon) { transform: translateX(4px); }
+
+  @media (width < 1024px) {
+    .post-card__cover, .post-card__body { grid-column: 1 / -1; }
+  }
+  @media (width < 640px) {
+    .post-card__badges { display: flex; margin: 10px 0 0; top: 0; }
+  }
+</style>

@@ -1,0 +1,53 @@
+---
+/**
+ * Writing index (design spec §5.2): route, title and description; the tag filter (chip links, works without JS);
+ * the featured card when a post is featured; then every post as rows under a column header, grouped by year.
+ * With nothing published, the header and filter ("All 0") stay and the list shows the dash-row empty state (§4.19).
+ */
+import Base from '@/layouts/Base.astro';
+import IndexHead from '@/components/writing/IndexHead.astro';
+import TagFilter from '@/components/writing/TagFilter.astro';
+import PostCard from '@/components/writing/PostCard.astro';
+import PostList from '@/components/writing/PostList.astro';
+import PostListEmpty from '@/components/writing/PostListEmpty.astro';
+import { getPostItems, WRITING_DESCRIPTION, WRITING_FEED } from '@/components/writing/posts';
+import { getTags } from '@/lib/content';
+import { linkTo } from '@/lib/routes';
+import { SITE } from '@/data/site';
+
+const items = await getPostItems();
+const tags = await getTags('blog');
+const featured = items.find((item) => item.post.data.featured);
+// Search (Pagefind) indexes only what is marked data-pagefind-body: the posts. With none published, this page is
+// marked instead, so the index holds "Writing: nothing published yet" rather than every page's chrome.
+const searchBody = items.length === 0 ? '' : undefined;
+---
+
+<Base title="Writing" description={WRITING_DESCRIPTION}>
+  <link slot="head" rel="alternate" type="application/rss+xml" title={`${SITE.name} — Writing`} href={WRITING_FEED} />
+  <div data-pagefind-body={searchBody}>
+    <IndexHead route="/blog" title="Writing" desc={WRITING_DESCRIPTION} rss={WRITING_FEED} />
+    <div class="wrap writing">
+      <TagFilter total={items.length} tags={tags} />
+      {items.length === 0 ? (
+        <div class="writing__empty"><PostListEmpty contact={linkTo('/contact/', '/#contact')} /></div>
+      ) : (
+        <>
+          {featured && <PostCard item={featured} />}
+          <PostList items={items} as="h3" years columns reveal />
+        </>
+      )}
+    </div>
+  </div>
+</Base>
+
+<style>
+  .writing { margin-top: var(--section-head-gap); padding-bottom: var(--section-pad); }
+  .writing :global(.posts) { margin-top: 40px; }
+  .writing :global(.post-card + .posts) { margin-top: 8px; }
+  .writing__empty { margin-top: 40px; }
+  @media (width < 1024px) {
+    .writing :global(.posts) { margin-top: 4px; }
+    .writing__empty { margin-top: 24px; }
+  }
+</style>
