@@ -219,5 +219,5 @@ TODO: write the note.
 }
 
 console.log(`Created ${created} (draft)
-Next: edit it, put any images in the same folder, and preview with SHOW_DRAFTS=1 npm run dev.
+Next: edit it, put any images in the same folder, and preview it with npm run dev (drafts always show in dev).
 To publish: set draft: false, then commit and push to master.`);
