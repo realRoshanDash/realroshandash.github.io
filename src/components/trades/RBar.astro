@@ -1,0 +1,62 @@
+---
+/**
+ * The card's R-bar (design spec §4.21): planned risk (−1R → 0, hatched) against reward (0 → the furthest target,
+ * solid), the entry as a signal tick, and the exit once the idea is decided. One image with a spoken label.
+ */
+import { formatR } from '@/lib/format';
+import { rBarModel } from './model';
+import type { TradeLike } from '@/lib/trades';
+
+interface Props {
+  trade: TradeLike;
+}
+const model = rBarModel(Astro.props.trade);
+const pos = (pct: number) => `left:${pct.toFixed(2)}%`;
+---
+
+{model && (
+  <div class="rbar" role="img" aria-label={model.label}>
+    <div class="rbar__track">
+      <span class="rbar__risk" style={`${pos(model.stop)};width:${(model.entry - model.stop).toFixed(2)}%`}></span>
+      <span class="rbar__reward" style={`${pos(model.entry)};width:${(model.target - model.entry).toFixed(2)}%`}></span>
+      <span class="rbar__entry" style={pos(model.entry)}></span>
+      {model.exit !== null && <span class="rbar__exit" style={pos(model.exit)}></span>}
+    </div>
+    <div class="rbar__labels">
+      <span class="rbar__l rbar__l--start" style={pos(model.stop)}>{formatR(-1, 0)}</span>
+      <span class="rbar__l" style={pos(model.entry)}>0</span>
+      <span class="rbar__l rbar__l--end" style={pos(model.target)}>{formatR(model.targetR)}</span>
+    </div>
+  </div>
+)}
+
+<style>
+  .rbar { padding-top: 12px; }
+  .rbar__track { position: relative; height: 14px; }
+  .rbar__track::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%;
+    height: 1px; background: var(--rule-2);
+  }
+  .rbar__risk {
+    position: absolute; top: 0; bottom: 0;
+    border: 1px solid var(--rule-2);
+    background: repeating-linear-gradient(-45deg, var(--hatch) 0 1px, transparent 1px 5px);
+  }
+  .rbar__reward { position: absolute; top: 5px; height: 4px; background: var(--fg); }
+  .rbar__entry {
+    position: absolute; top: -5px; width: 2px; height: 24px; margin-left: -1px;
+    background: var(--signal-ui);
+  }
+  /* exit: a 10px downward triangle above the track */
+  .rbar__exit {
+    position: absolute; top: -12px; width: 10px; height: 8px; margin-left: -5px;
+    background: var(--fg); clip-path: polygon(0 0, 100% 0, 50% 100%);
+  }
+  .rbar__labels { position: relative; height: 16px; margin-top: 10px; }
+  .rbar__l {
+    position: absolute; top: 0; transform: translateX(-50%);
+    font-size: 12px; line-height: 16px; color: var(--fg-3); font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .rbar__l--start { transform: none; }
+  .rbar__l--end { transform: translateX(-100%); color: var(--fg); font-weight: 600; }
+</style>

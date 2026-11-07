@@ -1,0 +1,102 @@
+---
+/**
+ * One note in the /notes list (design spec §4.21 "note row"): the date, then the title if the note has one and
+ * its text at 16px, the page it links to (↗), and an optional image with a 1px rule. A row on the grid, like a
+ * post row, with the same 3px signal top rule on hover; the title (or, untitled, the text) opens the note.
+ */
+import { Image } from 'astro:assets';
+import Icon from '@/components/ui/Icon.astro';
+import type { Note } from '@/lib/content';
+import { entryPath, noteTitle } from '@/lib/content';
+import { formatDateISO } from '@/lib/format';
+import { excerpt } from '@/lib/text';
+import { displayUrl } from './display';
+
+interface Props {
+  note: Note;
+  reveal?: number;
+}
+const { note, reveal } = Astro.props;
+const { title, published, tags, link, image, imageAlt, draft } = note.data;
+const href = entryPath('notes', note.id);
+const iso = formatDateISO(published);
+const text = excerpt(note.body ?? '', title ? 220 : 320);
+---
+
+<li class:list={['note-row', { 'note-row--untitled': !title }]} data-reveal={reveal}>
+  <p class="note-row__date label"><time datetime={iso}>{iso}</time></p>
+  <div class="note-row__main">
+    {title ? (
+      <>
+        <h2 class="note-row__title t-h3"><a href={href}>{title}</a></h2>
+        {text && <p class="note-row__text">{text}</p>}
+      </>
+    ) : (
+      <p class="note-row__text note-row__lead"><a href={href}>{text || noteTitle(note)}</a></p>
+    )}
+    {image && (
+      <Image class="note-row__img" src={image} alt={imageAlt ?? ''} widths={[400, 640, 960]} sizes="(min-width: 1024px) 40vw, 100vw" />
+    )}
+    {(link || draft) && (
+      <p class="note-row__extra">
+        {link && <a class="ext-link note-row__link mono" href={link} rel="noopener">{displayUrl(link)}<Icon name="arrow-up-right" /></a>}
+        {draft && <span class="badge"><span class="badge__hatch" aria-hidden="true"></span>Draft</span>}
+      </p>
+    )}
+  </div>
+  {tags.length > 0 && <p class="note-row__tags label">{tags.slice(0, 3).join(' · ')}</p>}
+</li>
+
+<style>
+  .note-row {
+    position: relative;
+    display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    column-gap: var(--gutter); row-gap: 8px;
+    padding: 20px 0 24px;
+    border-top: 1px solid var(--rule);
+  }
+  .note-row::before {
+    content: ''; position: absolute; left: 0; right: 0; top: -1px;
+    height: var(--signal-bar); background: var(--signal-ui);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform var(--dur-5) var(--ease-out);
+  }
+  .note-row:hover::before, .note-row:focus-within::before { transform: scaleX(1); }
+  .note-row:has(.note-row__main > :is(h2, .note-row__lead) a:focus-visible) { outline: 2px solid var(--focus); outline-offset: 4px; }
+
+  .note-row__date { grid-column: 1 / 3; grid-row: 1; padding-top: 5px; }
+  .note-row__main { grid-column: 3 / 9; grid-row: 1; display: grid; gap: 8px; justify-items: start; min-width: 0; }
+  .note-row__tags { grid-column: 9 / 13; grid-row: 1; padding-top: 5px; }
+
+  /* the title (or the untitled note's text) is the link, stretched over the row */
+  .note-row__main > :is(h2, .note-row__lead) a { outline: none; }
+  .note-row__main > :is(h2, .note-row__lead) a::after { content: ''; position: absolute; inset: 0; }
+  .note-row__title a {
+    background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+    transition: background-size var(--dur-4) var(--ease-out);
+  }
+  .note-row:hover .note-row__title a { background-size: 100% 1px; }
+
+  .note-row__text { max-width: 40em; font-size: 16px; line-height: 1.55; color: var(--fg-2); }
+  .note-row__lead { color: var(--fg); }
+  .note-row__lead a { transition: color var(--dur-2) linear; }
+  .note-row:hover .note-row__lead a { color: var(--fg); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.22em; text-decoration-color: var(--rule-2); }
+
+  /* a preview, not the photo: at most 320px tall, whatever its shape */
+  .note-row__img { width: auto; max-width: min(100%, 560px); height: auto; max-height: 320px; border: 1px solid var(--rule); margin-top: 6px; }
+
+  .note-row__extra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 2px; }
+  /* the external link sits above the stretched link, so both stay clickable */
+  .note-row__link { position: relative; z-index: 1; min-height: 32px; color: var(--fg-2); overflow-wrap: anywhere; }
+  .note-row__link:hover { color: var(--fg); }
+
+  @media (width < 1024px) {
+    .note-row__main { grid-column: 3 / 9; }
+    .note-row__tags { grid-column: 3 / 9; grid-row: 2; padding-top: 0; }
+  }
+  @media (width < 640px) {
+    .note-row { grid-template-columns: minmax(0, 1fr); row-gap: 10px; }
+    .note-row__date, .note-row__main, .note-row__tags { grid-column: 1; grid-row: auto; padding-top: 0; }
+    .note-row__tags { order: 3; }
+  }
+</style>

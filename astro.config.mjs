@@ -6,6 +6,7 @@ import expressiveCode from 'astro-expressive-code';
 import { satteri } from '@astrojs/markdown-satteri';
 import satteriCallouts from 'satteri-callouts';
 import { SITE } from './src/data/site.ts';
+import pruneUnusedCss from './src/integrations/prune-unused-css.ts';
 
 // satteri-callouts is typed against an older satteri plugin interface; it is runtime-compatible.
 /** @type {any} */
@@ -59,5 +60,6 @@ export default defineConfig({
     expressiveCode({ themes: ['github-dark-default', 'github-light-default'] }),
     mdx(),
     sitemap({ filter: (page) => !/\/(admin|404)(\/|$)/.test(new URL(page).pathname) }),
+    pruneUnusedCss(), // unpublished sections (no pages) leave no stylesheets behind
   ],
 });

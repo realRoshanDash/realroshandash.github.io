@@ -1,0 +1,151 @@
+---
+/**
+ * Chart facade (design spec §4.21). The page ships no third-party code: the static chart (frontmatter `chart`)
+ * or a quiet placeholder is shown, and TradingView's widget script is injected only when the visitor asks for
+ * it, into a box of the same size, so nothing shifts. Without JavaScript, a plain link opens the symbol on
+ * TradingView instead.
+ */
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import Icon from '@/components/ui/Icon.astro';
+import { tradingViewUrl } from './model';
+
+interface Props {
+  /** TradingView symbol, e.g. NASDAQ:NVDA (tvSymbol() in src/lib/trades.ts). */
+  symbol: string;
+  chart?: ImageMetadata;
+  chartAlt?: string;
+  id?: string;
+}
+const { symbol, chart, chartAlt, id = 'chart' } = Astro.props;
+---
+
+<figure class="chart" data-chart data-symbol={symbol} aria-labelledby={`${id}-cap`}>
+  <figcaption class="chart__top" id={`${id}-cap`}>
+    <span class="label">Chart · <span class="chart__sym">{symbol}</span> · Daily</span>
+  </figcaption>
+
+  <div class="chart__stage" data-chart-stage tabindex="-1" role="group" aria-label={`Chart of ${symbol}`}>
+    {chart ? (
+      <Image class="chart__img" src={chart} alt={chartAlt ?? `Chart of ${symbol}`} widths={[480, 720, 960]} sizes="(min-width: 1024px) 33vw, 100vw" />
+    ) : (
+      <div class="chart__ph">
+        <span class="chart__ph-sym mono">{symbol}</span>
+        <span class="chart__ph-text">The interactive chart loads on request.</span>
+      </div>
+    )}
+  </div>
+
+  <div class="chart__actions" data-requires-js>
+    <button class="btn btn--sm chart__load" type="button" data-chart-load><span>Load interactive chart (TradingView)</span></button>
+    <p class="chart__note" data-chart-note>Loads a third-party script from tradingview.com.</p>
+  </div>
+  <p class="chart__status" data-chart-status aria-live="polite"></p>
+  <a class="ext-link chart__out" href={tradingViewUrl(symbol)} rel="noopener">Open {symbol} on TradingView<Icon name="arrow-up-right" /></a>
+</figure>
+
+<style>
+  .chart {
+    display: flex; flex-direction: column; gap: 14px;
+    padding: 16px; border: 1px solid var(--rule-2); background: var(--bg-raised);
+  }
+  .chart__top { display: flex; justify-content: space-between; gap: 12px; }
+  .chart__sym { letter-spacing: 0.04em; }
+  .chart__stage {
+    position: relative; height: 360px; overflow: hidden;
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    background:
+      repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), var(--rule) calc(25% - 1px) 25%),
+      repeating-linear-gradient(0deg, transparent 0 calc(20% - 1px), var(--rule) calc(20% - 1px) 20%);
+  }
+  .chart__stage:focus { outline: none; }
+  .chart__stage:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+  .chart__stage[data-loaded] { background: none; }
+  .chart__img { width: 100%; height: 100%; object-fit: contain; background: var(--bg-raised); }
+  .chart__ph {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px;
+    padding: 24px; text-align: center;
+  }
+  .chart__ph-sym { font-size: 15px; color: var(--fg); background: var(--bg-raised); padding: 2px 6px; }
+  .chart__ph-text { font-size: 13px; color: var(--fg-2); background: var(--bg-raised); padding: 2px 6px; }
+
+  .chart__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+  .chart__load { max-width: 100%; white-space: normal; text-align: left; height: auto; min-height: 36px; padding-block: 6px; }
+  .chart__note { font-size: 12px; line-height: 1.45; color: var(--fg-3); }
+  .chart__status { font-size: 13px; color: var(--fg-2); }
+  .chart__status:empty { display: none; }
+  .chart__out { align-self: flex-start; min-height: 32px; font-size: 14px; color: var(--fg-2); }
+  .chart__out:hover { color: var(--fg); }
+
+  @media (width < 640px) {
+    .chart { padding: 14px; }
+    .chart__stage { height: 300px; }
+  }
+</style>
+
+<script>
+  /*
+   * Click-to-load TradingView: the embed script reads its JSON config from its own text. Nothing third-party is
+   * requested before the click. A theme change while the chart is open re-renders it in the new theme.
+   */
+  const SRC = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+
+  function mount(figure: HTMLElement, stage: HTMLElement, status: HTMLElement | null): void {
+    const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    // The widget fills the facade's box exactly (autosize), so loading it moves nothing.
+    const host = document.createElement('div');
+    host.className = 'tradingview-widget-container';
+    host.style.cssText = 'width:100%;height:100%';
+    const widget = document.createElement('div');
+    widget.className = 'tradingview-widget-container__widget';
+    widget.style.cssText = 'width:100%;height:100%';
+    const script = document.createElement('script');
+    script.src = SRC;
+    script.async = true;
+    script.textContent = JSON.stringify({
+      autosize: true,
+      symbol: figure.dataset.symbol,
+      interval: 'D',
+      timezone: 'Asia/Singapore',
+      theme,
+      style: '1',
+      locale: 'en',
+      backgroundColor: getComputedStyle(figure).backgroundColor,
+      allow_symbol_change: false,
+      hide_side_toolbar: true,
+      save_image: false,
+      calendar: false,
+      support_host: 'https://www.tradingview.com',
+    });
+    script.addEventListener('load', () => {
+      if (status) status.textContent = 'Interactive chart loaded. Chart by TradingView.';
+    });
+    script.addEventListener('error', () => {
+      delete stage.dataset.loaded;
+      if (status) status.textContent = 'The chart could not be loaded. Use the TradingView link below instead.';
+    });
+    host.append(widget, script);
+    stage.replaceChildren(host);
+    stage.dataset.loaded = '';
+  }
+
+  for (const figure of document.querySelectorAll<HTMLElement>('[data-chart]')) {
+    const stage = figure.querySelector<HTMLElement>('[data-chart-stage]');
+    const button = figure.querySelector<HTMLButtonElement>('[data-chart-load]');
+    const status = figure.querySelector<HTMLElement>('[data-chart-status]');
+    if (!stage || !button) continue;
+    button.addEventListener(
+      'click',
+      () => {
+        figure.querySelector('[data-chart-note]')?.remove();
+        button.remove();
+        if (status) status.textContent = 'Loading the interactive chart…';
+        mount(figure, stage, status);
+        stage.focus();
+        addEventListener('theme:change', () => mount(figure, stage, status));
+      },
+      { once: true },
+    );
+  }
+</script>

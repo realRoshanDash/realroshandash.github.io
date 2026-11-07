@@ -1,0 +1,86 @@
+---
+/**
+ * Update log (design spec §4.21): an append-only timeline, oldest first. Time on the left (date over the day count
+ * since the idea was logged), a rail with one mark per event, and the event on the right. Marks echo the kind —
+ * logged: ring · triggered: signal dot · update: hollow square · closed: solid square · stopped: cross ·
+ * invalidated: dotted ring — and the title always says it in words.
+ */
+import Icon from '@/components/ui/Icon.astro';
+import { formatDateISO } from '@/lib/format';
+import { tradeLog, type LogInput } from './model';
+
+interface Props {
+  trade: LogInput;
+  id?: string;
+}
+const { trade, id = 'update-log' } = Astro.props;
+const events = tradeLog(trade);
+---
+
+<section class="log" aria-labelledby={id}>
+  <div class="log__head">
+    <h2 class="label log__title-main" id={id}>Update log</h2>
+    <span class="label">Oldest first · append-only</span>
+  </div>
+  <ol class="log__list" role="list">
+    {events.map((event) => {
+      const iso = formatDateISO(event.date);
+      return (
+        <li class:list={['log__item', `log__item--${event.kind}`]}>
+          <p class="log__when">
+            <time datetime={iso}>{iso}</time>
+            <span>{event.day === 0 ? 'Day 0' : `Day ${event.day}`}</span>
+          </p>
+          <span class="log__mark" aria-hidden="true">{event.kind === 'stopped' && <Icon name="close" />}</span>
+          <div class="log__event">
+            <p class="log__title">{event.title}</p>
+            {event.text && <p class="log__text">{event.text}</p>}
+          </div>
+        </li>
+      );
+    })}
+  </ol>
+</section>
+
+<style>
+  .log__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .log__title-main { color: var(--fg); }
+
+  .log__list { --when: 25%; --rail: calc(var(--when) + var(--gutter) / 2); position: relative; border-bottom: 1px solid var(--rule); }
+  .log__list::before {
+    content: ''; position: absolute; left: var(--rail); top: 0; bottom: 0;
+    width: 1px; background: var(--rule-2);
+  }
+  .log__item {
+    position: relative;
+    display: grid; grid-template-columns: var(--when) minmax(0, 1fr); column-gap: var(--gutter);
+    padding: 16px 0 20px; border-top: 1px solid var(--rule);
+  }
+  .log__when { display: flex; flex-direction: column; gap: 2px; padding-top: 1px; font-variant-numeric: tabular-nums; }
+  .log__when time { font-size: 14px; font-weight: 600; color: var(--fg); }
+  .log__when span { font-size: 13px; color: var(--fg-2); }
+  .log__event { padding-left: calc(var(--gutter) / 2 + 12px); }
+  .log__title { font-size: 16px; line-height: 1.4; font-weight: 600; letter-spacing: -0.015em; }
+  .log__text { margin-top: 4px; max-width: 38em; font-size: 15px; line-height: 1.55; color: var(--fg-2); }
+
+  /* the mark sits on the rail, level with the first line */
+  .log__mark {
+    position: absolute; left: var(--rail); top: 22px;
+    display: grid; place-items: center;
+    width: 9px; height: 9px; transform: translateX(-50%);
+    border-radius: var(--radius-dot);
+    background: var(--bg); border: 1.5px solid var(--fg-2);
+  }
+  .log__item--triggered .log__mark { background: var(--signal-ui); border-color: var(--signal-ui); }
+  .log__item--update .log__mark { width: 8px; height: 8px; border-radius: 0; border-color: var(--fg); }
+  .log__item--closed .log__mark { width: 8px; height: 8px; border-radius: 0; background: var(--fg); border-color: var(--fg); }
+  .log__item--stopped .log__mark { width: 13px; height: 13px; border: 0; border-radius: 0; color: var(--loss); }
+  .log__item--stopped .log__mark :global(.icon) { width: 13px; height: 13px; stroke-width: 2; }
+  .log__item--invalidated .log__mark { border-style: dotted; border-color: var(--fg-3); width: 10px; height: 10px; }
+
+  @media (width < 640px) {
+    .log__list { --when: 30%; }
+    .log__event { padding-left: calc(var(--gutter) / 2 + 8px); }
+    .log__when time { font-size: 13px; }
+  }
+</style>

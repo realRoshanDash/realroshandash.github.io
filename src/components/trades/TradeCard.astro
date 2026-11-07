@@ -1,0 +1,108 @@
+---
+/**
+ * One trade idea in the /trades grid (design spec §4.21): status, ticker and direction, the setup, the planned
+ * levels with their % moves, the R-bar, and reward-to-risk with the date logged. The whole card opens the idea;
+ * the ticker is the link, stretched over the card. Same 3px signal top rule on hover as a post row.
+ */
+import type { Trade } from '@/lib/content';
+import { entryPath } from '@/lib/content';
+import { formatDateISO } from '@/lib/format';
+import { resultR } from '@/lib/trades';
+import StatusPill from './StatusPill.astro';
+import DirectionBadge from './DirectionBadge.astro';
+import RBar from './RBar.astro';
+import { finalTarget, levelCells, titleCase } from './model';
+
+interface Props {
+  trade: Trade;
+  /** "No. 003": position by date logged, oldest = 001. */
+  no: number;
+  /** Heading level of the ticker inside the page's outline. */
+  level?: 2 | 3;
+  /** Scroll-reveal stagger index (0–4), as on post rows. */
+  reveal?: number;
+}
+const { trade, no, level = 2, reveal } = Astro.props;
+const t = trade.data;
+const Heading = `h${level}` as 'h2' | 'h3';
+const href = entryPath('trades', trade.id);
+const levels = levelCells(t);
+const far = finalTarget(t);
+const iso = formatDateISO(t.published);
+---
+
+<li class="tcard" data-status={t.status} data-reveal={reveal}>
+  <div class="tcard__top">
+    <StatusPill status={t.status} result={resultR(t)} />
+    <span class="label tcard__no">No. {String(no).padStart(3, '0')}</span>
+  </div>
+
+  <div class="tcard__id">
+    <Heading class="tcard__ticker"><a href={href}>{t.ticker}<span class="sr-only">: {t.title}</span></a></Heading>
+    <DirectionBadge direction={t.direction} />
+    {t.draft && <span class="badge tcard__draft"><span class="badge__hatch" aria-hidden="true"></span>Draft</span>}
+  </div>
+  <p class="tcard__setup"><strong>{t.setup}</strong> · {titleCase(t.timeframe)} · {t.exchange}</p>
+
+  <dl class="tcard__levels">
+    <div><dt class="label">Entry</dt><dd><span class="px">{levels.entry.price}</span></dd></div>
+    <div><dt class="label">Stop</dt><dd><span class="px">{levels.stop.price}</span> <span class="pct">{levels.stop.pct}</span></dd></div>
+    <div class="tcard__targets">
+      <dt class="label">{levels.targets.length > 1 ? 'Targets' : 'Target'}</dt>
+      {levels.targets.map((target) => <dd><span class="px">{target.price}</span> <span class="pct">{target.pct}</span></dd>)}
+    </div>
+  </dl>
+
+  <RBar trade={t} />
+
+  <div class="tcard__foot">
+    <p class="tcard__rr"><span class="label">R:R</span> <span class="tcard__rr-value">{far ? `${far.r.toFixed(1)} : 1` : '—'}</span></p>
+    <p class="label"><time datetime={iso}>{iso}</time></p>
+  </div>
+</li>
+
+<style>
+  .tcard {
+    position: relative;
+    display: flex; flex-direction: column; gap: 18px;
+    min-width: 0; padding: 18px 0 22px;
+    border-top: 1px solid var(--rule-2);
+  }
+  .tcard::before {
+    content: ''; position: absolute; left: 0; right: 0; top: -1px;
+    height: var(--signal-bar); background: var(--signal-ui);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform var(--dur-5) var(--ease-out);
+  }
+  .tcard:hover::before, .tcard:focus-within::before { transform: scaleX(1); }
+  .tcard:has(a:focus-visible) { outline: 2px solid var(--focus); outline-offset: 4px; }
+
+  .tcard__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+  .tcard__id { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin-top: 6px; }
+  .tcard__ticker {
+    font-size: clamp(48px, 4.6vw, 72px); line-height: 0.86; font-weight: 700; letter-spacing: -0.045em;
+    font-variation-settings: var(--opsz-display);
+  }
+  .tcard__ticker a { outline: none; }
+  .tcard__ticker a::after { content: ''; position: absolute; inset: 0; } /* the whole card opens the idea */
+
+  .tcard__setup { font-size: 15px; line-height: 1.45; color: var(--fg-2); }
+  .tcard__setup strong { color: var(--fg); font-weight: 600; }
+
+  .tcard__levels {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px var(--gutter);
+    padding-top: 16px; border-top: 1px solid var(--rule);
+  }
+  .tcard__levels > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .tcard__levels dd { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; }
+  .px { font-size: 20px; line-height: 1.2; font-weight: 550; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+  .pct { font-size: 13px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+
+  .tcard__foot {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    margin-top: auto; padding-top: 14px; border-top: 1px solid var(--rule);
+  }
+  .tcard__rr { display: flex; align-items: baseline; gap: 10px; }
+  .tcard__rr-value { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+</style>
