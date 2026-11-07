@@ -10,8 +10,13 @@
   </head>
   <body>
     <noscript>The content manager needs JavaScript.</noscript>
-    <!-- Sveltia CMS (https://sveltiacms.app), pinned to major version 0. A classic script, not
-         type="module", as the Sveltia docs require. Allowed by the /admin/* CSP in public/_headers. -->
-    <script src="https://unpkg.com/@sveltia/cms@0/dist/sveltia-cms.js"></script>
+    <!-- Sveltia CMS (https://sveltiacms.app), pinned to one exact version. The integrity hash makes the
+         browser refuse the script if unpkg ever serves different bytes. To upgrade, see README.md →
+         Publishing → A. A classic script, not type="module", as the Sveltia docs require. -->
+    <script
+      src="https://unpkg.com/@sveltia/cms@0.261.0/dist/sveltia-cms.js"
+      integrity="sha384-sty7BGmg7YGd6Wi3G73SvUYWcNE6vztGSEklT7ZI8T/3JSshWKHKH7HuUk99s/HJ"
+      crossorigin="anonymous"
+    ></script>
   </body>
 </html>

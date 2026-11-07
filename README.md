@@ -52,6 +52,21 @@ The token is kept in that browser's local storage, so sign out on shared compute
 uploaded to an entry are saved in the entry's folder. JPEG and HEIC uploads are converted to
 WebP (2400 px max); PNGs are kept as they are. Works from a phone too.
 
+**Updating the CMS.** `public/admin/index.html` loads one exact Sveltia CMS version from unpkg,
+with a Subresource Integrity hash, so browsers refuse the script if unpkg ever serves different
+bytes. To upgrade ([release notes](https://github.com/sveltia/sveltia-cms/releases)), put the new
+version in the `src` URL and the new file's hash in `integrity`:
+
+```sh
+v=$(npm view @sveltia/cms version)   # the latest version, e.g. 0.261.0
+curl -fsSL "https://unpkg.com/@sveltia/cms@$v/dist/sveltia-cms.js" | openssl dgst -sha384 -binary | openssl base64 -A
+# → integrity="sha384-<that output>"
+```
+
+Then run `npm run build && npm run preview` and check that `/admin/` still shows the sign-in
+screen. A hash that doesn't match leaves the page blank, with an integrity error in the browser
+console.
+
 ### B. Scaffold from the terminal
 
 ```sh
@@ -162,8 +177,9 @@ can't read HEIC (the CMS converts them on upload).
 ## Drafts
 
 Entries with `draft: true` are left out of production builds: no page, and no place in lists,
-the feed, the sitemap or search. To preview drafts locally, run `SHOW_DRAFTS=1 npm run dev`, or
-put `SHOW_DRAFTS=1` in `.env` (see `.env.example`). Never set it in CI.
+the feed, the sitemap or search. `npm run dev` always shows them. To check drafts in a built
+site, build with `SHOW_DRAFTS=1 npm run build` (or put `SHOW_DRAFTS=1` in `.env`, see
+`.env.example`), then run `npm run preview`. Never set it in CI.
 
 ## Contact card
 

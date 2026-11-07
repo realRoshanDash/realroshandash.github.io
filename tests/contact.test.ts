@@ -1,11 +1,17 @@
 /**
- * Sealed contact card: kernel, format, tamper resistance, validation and the solver (main-thread
- * path, plus the real worker file driven through a worker_threads-backed `Worker` shim).
+ * Sealed contact card: kernel, format, tamper resistance, validation, the solver (main-thread
+ * path, plus the real worker file driven through a worker_threads-backed `Worker` shim), the
+ * tab-session cache and the seal-contact CLI.
  * Run: node --test tests/contact.test.ts
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { createDecipheriv, createHash, randomBytes, randomInt } from 'node:crypto';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Worker as ThreadWorker } from 'node:worker_threads';
 import {
   ContactError,
@@ -18,7 +24,14 @@ import {
   unsealContact,
   type SealedContact,
 } from '../src/lib/contact/seal.ts';
-import { solve, verify, type SolveProgress } from '../src/scripts/contact/solver.ts';
+import {
+  clearCachedContact,
+  readCachedContact,
+  solve,
+  verify,
+  writeCachedContact,
+  type SolveProgress,
+} from '../src/scripts/contact/solver.ts';
 import type { PowResponse } from '../src/scripts/contact/pow.worker.ts';
 
 const CONTACT = {
@@ -152,6 +165,22 @@ describe('seal / unseal', () => {
     const { salt, check } = decodeSealed(sealed);
     assert.equal(createPowSearch(salt, check).scan(2 ** 32 - 5000, 2 ** 32), top);
     assert.deepEqual(await unsealContact(sealed, top), NORMALISED);
+  });
+
+  it('draws the secret nonce uniformly from the whole range', async () => {
+    const nonces: number[] = [];
+    for (let i = 0; i < 16; i++) {
+      const sealed = await sealContact(CONTACT, { difficulty: 16 });
+      const { salt, check } = decodeSealed(sealed);
+      const nonce = createPowSearch(salt, check).scan(0, 2 ** 16);
+      assert.ok(nonce >= 0, 'the nonce is in [0, 2^16)');
+      assert.deepEqual(await unsealContact(sealed, nonce), NORMALISED);
+      nonces.push(nonce);
+    }
+    // For uniform 16-bit nonces, all 16 below 2^8 has probability 2^-128 and fewer than 12 distinct
+    // values 2.4 × 10^-17, so neither can flake. Either one would mean only a few bits are random.
+    assert.ok(nonces.some((n) => n >= 2 ** 8), `nonces ${nonces}`);
+    assert.ok(new Set(nonces).size >= 12, `nonces ${nonces}`);
   });
 
   it('rejects bad difficulties and nonces', async () => {
@@ -526,4 +555,152 @@ describe('pow.worker protocol', () => {
       second.worker.terminate();
     }
   });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Tab-session cache, against a Map-backed sessionStorage stub.
+// ---------------------------------------------------------------------------------------------
+
+class MemoryStorage {
+  readonly items = new Map<string, string>();
+  getItem(key: string): string | null {
+    return this.items.get(key) ?? null;
+  }
+  setItem(key: string, value: string): void {
+    this.items.set(key, String(value));
+  }
+  removeItem(key: string): void {
+    this.items.delete(key);
+  }
+}
+
+/** Runs `fn` with globalThis.sessionStorage defined by `descriptor`, then restores the original. */
+function withSessionStorage<T>(descriptor: PropertyDescriptor, fn: () => T): T {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, ...descriptor });
+  try {
+    return fn();
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'sessionStorage', original);
+    else delete (globalThis as { sessionStorage?: unknown }).sessionStorage;
+  }
+}
+
+const cacheKeyOf = (sealed: SealedContact) => `contact-card:v1:${sealed.check.slice(0, 16)}`;
+
+describe('tab-session cache', () => {
+  it('stores the normalised card under contact-card:v1:<first 16 hex of check>', async () => {
+    const sealed = await sealContact(CONTACT, { difficulty: 8 });
+    const storage = new MemoryStorage();
+    withSessionStorage({ value: storage }, () => {
+      assert.equal(readCachedContact(sealed), null);
+      writeCachedContact(sealed, CONTACT);
+      assert.deepEqual([...storage.items.keys()], [cacheKeyOf(sealed)]);
+      assert.deepEqual(JSON.parse(storage.items.get(cacheKeyOf(sealed))!), NORMALISED);
+      assert.deepEqual(readCachedContact(sealed), NORMALISED);
+      clearCachedContact(sealed);
+      assert.equal(storage.items.size, 0);
+      assert.equal(readCachedContact(sealed), null);
+    });
+  });
+
+  it('misses after the card is re-sealed, so updated details show at once', async () => {
+    const old = await sealContact(CONTACT, { difficulty: 8 });
+    const resealed = await sealContact({ ...CONTACT, note: 'New number.' }, { difficulty: 8 });
+    assert.notEqual(cacheKeyOf(old), cacheKeyOf(resealed));
+    const storage = new MemoryStorage();
+    withSessionStorage({ value: storage }, () => {
+      writeCachedContact(old, NORMALISED);
+      assert.equal(readCachedContact(resealed), null);
+      assert.deepEqual(readCachedContact(old), NORMALISED);
+    });
+  });
+
+  it('re-validates what it reads: malformed or malicious entries read as null', async () => {
+    const sealed = await sealContact(CONTACT, { difficulty: 8 });
+    const storage = new MemoryStorage();
+    const bad = [
+      '',
+      '{"email":',
+      'undefined',
+      'null',
+      '[]',
+      '"someone@example.com"',
+      '{}',
+      JSON.stringify({ ...NORMALISED, calendar: 'javascript:alert(document.cookie)' }),
+      JSON.stringify({ ...NORMALISED, calendar: 'http://cal.example.com/someone/30min' }),
+      JSON.stringify({ ...NORMALISED, telegram: '"><img src=x onerror=alert(1)>' }),
+      JSON.stringify({ ...NORMALISED, email: ['someone@example.com'] }),
+      JSON.stringify({ ...NORMALISED, isAdmin: true }),
+      JSON.stringify({ ...NORMALISED, note: `bell${String.fromCharCode(7)}` }),
+    ];
+    withSessionStorage({ value: storage }, () => {
+      for (const value of bad) {
+        storage.items.set(cacheKeyOf(sealed), value);
+        assert.equal(readCachedContact(sealed), null, value);
+      }
+      // A valid entry comes back normalised.
+      storage.items.set(cacheKeyOf(sealed), JSON.stringify(CONTACT));
+      assert.deepEqual(readCachedContact(sealed), NORMALISED);
+    });
+  });
+
+  it('treats missing, blocked or full storage as "not cached" and never throws', async () => {
+    const sealed = await sealContact(CONTACT, { difficulty: 8 });
+    const check = () => {
+      assert.equal(readCachedContact(sealed), null);
+      writeCachedContact(sealed, NORMALISED);
+      clearCachedContact(sealed);
+      assert.equal(readCachedContact(sealed), null);
+    };
+    const fail = (name: string) => () => {
+      throw new DOMException(`storage failed (${name})`, name);
+    };
+    withSessionStorage({ value: undefined }, check);
+    withSessionStorage({ get: fail('SecurityError') }, check); // the getter itself throws when storage is blocked
+    withSessionStorage({ value: { getItem: fail('SecurityError'), setItem: fail('QuotaExceededError'), removeItem: fail('SecurityError') } }, check);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// scripts/seal-contact.mjs, run as a child process.
+// ---------------------------------------------------------------------------------------------
+
+describe('seal-contact CLI', () => {
+  const script = fileURLToPath(new URL('../scripts/seal-contact.mjs', import.meta.url));
+  const seal = (out: string) =>
+    spawnSync(process.execPath, [script, '--email', 'someone@example.com', '--difficulty', '1', '--out', out], {
+      encoding: 'utf8',
+      env: { ...process.env, CONTACT_JSON: '' },
+    });
+  const inTempDir = async (fn: (dir: string) => unknown) => {
+    const dir = mkdtempSync(join(tmpdir(), 'seal-contact-test-'));
+    try {
+      await fn(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it('writes a card that opens, and leaves no temporary file', () =>
+    inTempDir(async (dir) => {
+      const out = join(dir, 'card.json');
+      const result = seal(out);
+      assert.equal(result.status, 0, result.stderr);
+      assert.deepEqual(readdirSync(dir), ['card.json']);
+      const { contact } = await solve(JSON.parse(readFileSync(out, 'utf8')), { workers: 0 });
+      assert.deepEqual(contact, { email: 'someone@example.com' });
+    }));
+
+  it('reports a failed write in one line, exits 1 and removes its temporary file', () =>
+    inTempDir((dir) => {
+      const out = join(dir, 'taken');
+      mkdirSync(out); // a directory, so renaming the temporary file onto it fails
+      const result = seal(out);
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /^seal-contact: could not write \S*taken: \S/);
+      assert.equal(result.stderr.trim().split('\n').length, 1, `no stack trace:\n${result.stderr}`);
+      assert.deepEqual(readdirSync(dir), ['taken']);
+      assert.deepEqual(readdirSync(out), []);
+    }));
 });

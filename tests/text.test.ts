@@ -20,6 +20,13 @@ describe('markdownToPlain', () => {
     assert.equal(markdownToPlain(md), 'See the docs, a ref and https://example.com. Done.\n\nA footnote.');
   });
 
+  test('linked images and badges leave no brackets behind', () => {
+    const md = 'Build [![CI](https://x.dev/ci.svg)](https://x.dev/ci) [![npm][badge]][pkg] ok.\n\n[badge]: b.svg\n[pkg]: https://npm.im/x';
+    assert.equal(markdownToPlain(md), 'Build ok.');
+    assert.equal(markdownToPlain('[![CI](ci.svg)](https://x.dev/ci)'), '');
+    assert.equal(markdownToPlain('[![CI](ci.svg)](https://x.dev/ci)', { linkUrls: true }), 'https://x.dev/ci');
+  });
+
   test('code blocks are dropped, or kept for word counts; inline code keeps its text', () => {
     const md = 'Run `npm ci` first.\n\n```sh\nnpm run build\n```\n\nThen deploy.';
     assert.equal(markdownToPlain(md), 'Run npm ci first.\n\nThen deploy.');
@@ -28,6 +35,46 @@ describe('markdownToPlain', () => {
 
   test('markup inside code spans is literal', () => {
     assert.equal(markdownToPlain('Use `**kwargs` and `<div>`, not ``a ` b``.'), 'Use **kwargs and <div>, not a ` b.');
+  });
+
+  test('entities and backslashes inside code stay as written', () => {
+    assert.equal(markdownToPlain('Type `&nbsp;` or `&lt;div&gt;`, not &lt;div&gt;.'), 'Type &nbsp; or &lt;div&gt;, not <div>.');
+    assert.equal(markdownToPlain('Match `\\d+\\.\\d+` under `C:\\`, or \\`not code`.'), 'Match \\d+\\.\\d+ under C:\\, or `not code`.');
+    // An escaped & starts no entity.
+    assert.equal(markdownToPlain('Write \\&amp; to get &amp;.'), 'Write &amp; to get &.');
+  });
+
+  test('kept code blocks are never read as markdown', () => {
+    const md = 'Before.\n\n```py\n# not a heading\nimport os\nf(**kw) & <b>&amp; \\.\n```\n\nAfter.';
+    assert.equal(markdownToPlain(md, { keepCode: true }), 'Before.\n\n# not a heading import os f(**kw) & <b>&amp; \\.\n\nAfter.');
+    assert.equal(markdownToPlain(md), 'Before.\n\nAfter.');
+  });
+
+  test('linkUrls shows where each inline link goes', () => {
+    const md = [
+      'See [the docs](https://example.com/a_(b) "Title"), [my post](/blog/x/), [up](#top) and [mail](mailto:a@b.co).',
+      '',
+      '[https://example.com](https://example.com), [](https://x.dev), [Foo](https://w.org/Foo_\\(bar\\)),',
+      '[q](https://x.dev/?a=1&amp;b=2), [init](https://x.dev/__init__/*a*) and [nowhere]().',
+    ].join('\n');
+    assert.equal(
+      markdownToPlain(md, { linkUrls: true, baseUrl: 'https://roshandash.com/notes/n/' }),
+      'See the docs (https://example.com/a_(b)), my post (https://roshandash.com/blog/x/), ' +
+        'up (https://roshandash.com/notes/n/#top) and mail (mailto:a@b.co).\n\n' +
+        'https://example.com, https://x.dev, Foo (https://w.org/Foo_(bar)), ' +
+        'q (https://x.dev/?a=1&b=2), init (https://x.dev/__init__/*a*) and nowhere.',
+    );
+    assert.equal(markdownToPlain('[my post](/blog/x/ "t")', { linkUrls: true }), 'my post (/blog/x/)');
+    assert.equal(markdownToPlain('[my post](/blog/x/)'), 'my post');
+  });
+
+  test('notes feed text: code blocks and link targets survive', () => {
+    // The options noteFeedItem (src/lib/content.ts) passes for a feed's content:encoded.
+    const note = 'TIL [jq](https://jqlang.org) can pretty-print:\n\n```sh\ncurl -s "$URL" | jq .\n```';
+    assert.equal(
+      markdownToPlain(note, { keepCode: true, linkUrls: true, baseUrl: 'https://roshandash.com/notes/til/' }),
+      'TIL jq (https://jqlang.org) can pretty-print:\n\ncurl -s "$URL" | jq .',
+    );
   });
 
   test('tilde fences, longer fences and unclosed fences', () => {
@@ -76,6 +123,8 @@ describe('markdownToPlain', () => {
       markdownToPlain('Costs \\$810, \\*not em\\* &amp; &lt;b&gt; &#8212; &#x2014; &copy;'),
       'Costs $810, *not em* & <b> — — &copy;',
     );
+    // Entities never decode to the private-use placeholders, or to Object.prototype members.
+    assert.equal(markdownToPlain('&#xE02A;a&#xE02A; &#57600;0&#57601; &constructor;'), '&#xE02A;a&#xE02A; &#57600;0&#57601; &constructor;');
   });
 
   test('whitespace is normalised and empty input stays empty', () => {
@@ -133,10 +182,21 @@ describe('slugify', () => {
     assert.equal(slugify('Machine Learning'), 'machine-learning');
     assert.equal(slugify('  Risk   management  '), 'risk-management');
     assert.equal(slugify('S&P 500'), 's-p-500');
-    assert.equal(slugify('C++ / Rust'), 'c-rust');
+    assert.equal(slugify('C++ / Rust'), 'c-plus-plus-rust');
     assert.equal(slugify('node.js'), 'node-js');
     assert.equal(slugify('snake_case'), 'snake-case');
     assert.equal(slugify('AI'), slugify('ai'));
+  });
+
+  test('"+" and a word\'s trailing "#" are spelled out, so C++, C#, C and F# stay apart', () => {
+    const slugs = ['C++', 'C#', 'C', 'F#'].map(slugify);
+    assert.deepEqual(slugs, ['c-plus-plus', 'c-sharp', 'c', 'f-sharp']);
+    assert.equal(slugify('Notepad++'), 'notepad-plus-plus');
+    assert.equal(slugify('C# / .NET'), 'c-sharp-net');
+    assert.equal(slugify('Ｃ＃'), 'c-sharp'); // full-width forms fold to ASCII first
+    // A hashtag's or number's "#" just goes.
+    assert.equal(slugify('#topic'), 'topic');
+    assert.equal(slugify('#1 pick'), '1-pick');
   });
 
   test('folds accents and drops apostrophes', () => {

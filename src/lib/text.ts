@@ -8,12 +8,13 @@
 
 const WORDS_PER_MINUTE = 230;
 
-// While the other rules run, private-use code points stand in for backslash escapes and code spans, so
-// \*literal\* in prose or `**kwargs` in code is never mistaken for markup.
+// While the other rules run, private-use code points stand in for backslash escapes and for text that must come
+// out exactly as written (code, and link URLs when shown), so \*literal\* in prose or `**kwargs` in code is never
+// mistaken for markup.
 const ESCAPED = 0xe000; // an escaped ASCII punctuation character c is held as U+E000 + c (U+E021–U+E07E)
-const CODE_OPEN = '\ue100';
-const CODE_CLOSE = '\ue101';
-const CODE_TOKEN = new RegExp(`${CODE_OPEN}(\\d+)${CODE_CLOSE}`, 'g');
+const LITERAL_OPEN = '\ue100';
+const LITERAL_CLOSE = '\ue101';
+const LITERAL_TOKEN = new RegExp(`${LITERAL_OPEN}(\\d+)${LITERAL_CLOSE}`, 'g');
 
 const ENTITIES: Record<string, string> = {
   amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
@@ -22,25 +23,33 @@ const ENTITIES: Record<string, string> = {
 
 function decodeEntities(text: string): string {
   return text.replace(/&(#\d{1,7}|#x[\da-f]{1,6}|[a-z]+);/gi, (match, name: string) => {
-    if (name[0] !== '#') return ENTITIES[name.toLowerCase()] ?? match;
+    const key = name.toLowerCase();
+    if (name[0] !== '#') return Object.hasOwn(ENTITIES, key) ? ENTITIES[key] : match; // own keys: not &constructor;
     const code = name[1] === 'x' || name[1] === 'X' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10);
-    return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : match;
+    // Never decode to a placeholder code point (U+E000–U+E1FF), so an entity can't forge an escape or a literal.
+    return code > 0 && code <= 0x10ffff && (code < 0xe000 || code > 0xe1ff) ? String.fromCodePoint(code) : match;
   });
 }
 
-/** Remove fenced code blocks (``` / ~~~), or keep only their text. An unclosed fence runs to the end. */
-function stripFences(md: string, keepCode: boolean): string {
+/**
+ * Remove fenced code blocks (``` / ~~~). With `keep`, each block becomes a paragraph of its own instead: the
+ * placeholder that `keep` returns for the block's text. An unclosed fence runs to the end.
+ */
+function stripFences(md: string, keep: ((code: string) => string) | null): string {
   const out: string[] = [];
   let fence = '';
+  let code: string[] = [];
+  const endBlock = () => {
+    if (keep) out.push(keep(code.join('\n')));
+    out.push('');
+    fence = '';
+    code = [];
+  };
   for (const line of md.split('\n')) {
     if (fence) {
       const close = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line)?.[1];
-      if (close && close[0] === fence[0] && close.length >= fence.length) {
-        fence = '';
-        out.push('');
-      } else if (keepCode) {
-        out.push(line);
-      }
+      if (close && close[0] === fence[0] && close.length >= fence.length) endBlock();
+      else code.push(line);
       continue;
     }
     const open = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
@@ -51,7 +60,24 @@ function stripFences(md: string, keepCode: boolean): string {
       out.push(line);
     }
   }
+  if (fence) endBlock();
   return out.join('\n');
+}
+
+/** The URL part of an inline link's destination: `url` or `<url>`, either one optionally followed by a title. */
+function destinationUrl(destination: string): string {
+  const trimmed = destination.trim();
+  return (trimmed[0] === '<' ? /^<([^<>\n]*)>/.exec(trimmed)?.[1] : /^\S*/.exec(trimmed)?.[0]) ?? '';
+}
+
+/** `url` resolved against `base` (an absolute URL) when it is relative, else as written. */
+function resolveUrl(url: string, base: string | undefined): string {
+  if (!url || !base || /^[a-z][a-z\d+.-]*:/i.test(url)) return url;
+  try {
+    return new URL(url, base).href;
+  } catch {
+    return url;
+  }
 }
 
 /** Block syntax for one line. Headings, list items and table rows become paragraphs of their own. */
@@ -78,14 +104,15 @@ function stripBlock(line: string): string {
   return text;
 }
 
-/** Inline syntax for one paragraph. */
-function stripInline(text: string): string {
+/** Inline syntax for one paragraph. `link` gives what a link shows, from its text and its destination. */
+function stripInline(text: string, link: (label: string, destination: string) => string): string {
   return text
     .replace(/!\[[^\]]*\]\((?:[^()]|\([^()]*\))*\)/g, '') // images
     .replace(/!\[[^\]]*\]\[[^\]]*\]/g, '') // reference images
     .replace(/\[\^[^\]]+\]/g, '') // footnote references
-    .replace(/\[([^\]]+)\]\((?:[^()]|\([^()]*\))*\)/g, '$1') // links → their text
-    .replace(/\[([^\]]+)\]\[[^\]]*\]/g, '$1') // reference links
+    // Links. The text may be empty: a linked image or badge, [![CI](ci.svg)](…), is [](…) once the image is gone.
+    .replace(/\[([^\]]*)\]\(((?:[^()]|\([^()]*\))*)\)/g, (_, label: string, destination: string) => link(label, destination))
+    .replace(/\[([^\]]*)\]\[[^\]]*\]/g, '$1') // reference links → their text
     .replace(/<mailto:([^>\s]+)>/gi, '$1') // autolinks
     .replace(/<((?:https?|ftp):\/\/[^>\s]+)>/gi, '$1')
     .replace(/<br\s*\/?>/gi, ' ')
@@ -96,19 +123,37 @@ function stripInline(text: string): string {
     .replace(/(^|[^\w])_(?=\S)([\s\S]*?\S)_(?!\w)/g, '$1$2');
 }
 
+export interface PlainTextOptions {
+  /** Keep fenced code blocks, exactly as written, each as a paragraph of its own. By default they are dropped. */
+  keepCode?: boolean;
+  /** Show inline links as "text (url)", or as the bare URL when the text is empty or is the URL itself. */
+  linkUrls?: boolean;
+  /** With `linkUrls`: the absolute URL that relative link URLs are resolved against, i.e. the page's own URL. */
+  baseUrl?: string;
+}
+
 /**
  * Markdown (or MDX) → plain text, paragraphs separated by a blank line. Code blocks are dropped unless
- * `keepCode` (reading time counts them). Inline code and link text are kept; images are dropped.
+ * `keepCode` (reading time counts them; feeds show them). Code is never treated as markup, and its entities and
+ * backslashes stay as written. Inline code and link text are kept, link URLs too with `linkUrls`; images are
+ * dropped.
  */
-export function markdownToPlain(md: string, { keepCode = false }: { keepCode?: boolean } = {}): string {
-  let text = stripFences(md.replace(/\r\n?/g, '\n'), keepCode);
+export function markdownToPlain(md: string, { keepCode = false, linkUrls = false, baseUrl }: PlainTextOptions = {}): string {
+  const literals: string[] = [];
+  const literal = (text: string) => `${LITERAL_OPEN}${literals.push(text) - 1}${LITERAL_CLOSE}`;
+  // Entities are decoded before the placeholders are put back, so `&lt;` in code and \&amp; in prose stay as written.
+  const finish = (text: string) =>
+    decodeEntities(text)
+      .replace(LITERAL_TOKEN, (_, i: string) => literals[Number(i)] ?? '')
+      .replace(/[\ue021-\ue07e]/g, (char) => String.fromCharCode(char.charCodeAt(0) - ESCAPED));
 
-  text = text.replace(/\\([!-/:-@[-`{-~])/g, (_, char: string) => String.fromCharCode(ESCAPED + char.charCodeAt(0)));
-  const spans: string[] = [];
-  text = text.replace(/(`+)([^\n]+?)\1(?!`)/g, (_, _ticks, code: string) => {
-    spans.push(code.trim());
-    return `${CODE_OPEN}${spans.length - 1}${CODE_CLOSE}`;
-  });
+  let text = stripFences(md.replace(/\r\n?/g, '\n'), keepCode ? literal : null);
+
+  // Escapes and code spans in one left-to-right pass, so \` can't open a code span and a backslash inside one is
+  // kept: `\d+\.` stays as written.
+  text = text.replace(/\\([!-/:-@[-`{-~])|(`+)([^\n]+?)\2(?!`)/g, (_, escaped?: string, _ticks?: string, code = '') =>
+    escaped ? String.fromCharCode(ESCAPED + escaped.charCodeAt(0)) : literal(code.trim()),
+  );
 
   text = text
     .replace(/<!--[\s\S]*?(?:-->|$)/g, '') // HTML comments
@@ -118,17 +163,17 @@ export function markdownToPlain(md: string, { keepCode = false }: { keepCode?: b
     .map(stripBlock)
     .join('\n');
 
+  const link = (label: string, destination: string): string => {
+    if (!linkUrls) return label;
+    const url = resolveUrl(finish(destinationUrl(destination)), baseUrl);
+    if (!url) return label;
+    const shown = finish(label).trim();
+    return shown && shown !== url ? `${label} (${literal(url)})` : literal(url);
+  };
+
   return text
     .split(/\n[ \t]*\n/)
-    .map((paragraph) =>
-      decodeEntities(
-        stripInline(paragraph)
-          .replace(CODE_TOKEN, (_, i: string) => spans[Number(i)] ?? '')
-          .replace(/[\ue021-\ue07e]/g, (char) => String.fromCharCode(char.charCodeAt(0) - ESCAPED)),
-      )
-        .replace(/\s+/g, ' ')
-        .trim(),
-    )
+    .map((paragraph) => finish(stripInline(paragraph, link)).replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .join('\n\n');
 }
@@ -164,6 +209,8 @@ export function readingTime(md: string): { minutes: number; words: number } {
 /**
  * URL slug for a tag or title: lowercase ASCII letters and digits joined by single hyphens.
  * "Machine Learning" → "machine-learning", "Café" → "cafe", "Today's picks" → "todays-picks".
+ * "+", and "#" right after a letter or digit, are spelled out so that languages keep apart: "C++" → "c-plus-plus",
+ * "C#" → "c-sharp", "F#" → "f-sharp" (and "C" → "c"). A hashtag's "#" just goes: "#topic" → "topic".
  * Returns '' when nothing URL-safe is left (e.g. "日本"); callers must handle that.
  */
 export function slugify(input: string): string {
@@ -172,6 +219,8 @@ export function slugify(input: string): string {
     .replace(/[\u0300-\u036f]/g, '') // combining diacritics
     .toLowerCase()
     .replace(/['’]/g, '')
+    .replace(/\+/g, ' plus ')
+    .replace(/([a-z0-9])#/g, '$1 sharp ')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }

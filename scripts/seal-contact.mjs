@@ -24,7 +24,7 @@
  * hashes expected, 2× that in the worst case) it hashes for ~1.2–1.8 s, plus worker start-up.
  * This desktop takes ~0.4 s. d = 23 would push phones to ~2.4–3.5 s.
  */
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -130,10 +130,21 @@ const sealed = await (async () => {
 
 // Write atomically so an interrupted run never leaves a truncated card behind.
 const out = args.out === undefined ? DEFAULT_OUT : resolve(args.out);
-mkdirSync(dirname(out), { recursive: true });
+const shown = relative(process.cwd(), out);
+const outName = shown && !shown.startsWith('..') ? shown : out;
 const tmp = `${out}.${process.pid}.tmp`;
-writeFileSync(tmp, `${JSON.stringify(sealed, null, 2)}\n`);
-renameSync(tmp, out);
+try {
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(tmp, `${JSON.stringify(sealed, null, 2)}\n`);
+  renameSync(tmp, out);
+} catch (error) {
+  try {
+    rmSync(tmp, { force: true });
+  } catch {
+    // Best effort: the error below is the one that matters.
+  }
+  fail(`could not write ${outName}: ${error instanceof Error ? error.message : error}`);
+}
 
 // Summary. Values are masked so that CI logs never show them in full.
 /** @type {Record<string, (value: string) => string>} */
@@ -154,7 +165,6 @@ const seconds = (hashes, rate) => {
 /** @param {number} n */
 const count = (n) => (n >= 1e6 ? `${+(n / 1e6).toPrecision(2)}M` : n >= 1e3 ? `${+(n / 1e3).toPrecision(2)}K` : `${n}`);
 const expected = 2 ** (difficulty - 1);
-const shown = relative(process.cwd(), out);
 const rows = [
   ['source', source + (ignored.length ? ` (ignored: ${ignored.join(', ')})` : '')],
   ...Object.entries(parseContact(input)).map(([field, value]) => [field, MASK[field](value)]),
@@ -162,7 +172,7 @@ const rows = [
   ['time', `${seconds(expected, DESKTOP_RATE)} desktop, ${seconds(expected, PHONE_RATE)} mid-range phone (expected; up to 2× worst case)`],
   ['created', sealed.createdAt],
 ];
-console.log(`Sealed contact card → ${shown && !shown.startsWith('..') ? shown : out}`);
+console.log(`Sealed contact card → ${outName}`);
 for (const [label, value] of rows) console.log(`  ${label.padEnd(11)} ${value}`);
 if (difficulty < 16) console.warn('  warning: below 16 bits the puzzle is near-instant; it only stops scrapers that do not run JS.');
 if (expected / PHONE_RATE > 5) console.warn('  warning: phones will take several seconds; consider a lower --difficulty.');

@@ -187,10 +187,15 @@ export function tradeFeedItem(trade: Trade): FeedItem {
   };
 }
 
-/** Notes are short, so the feed carries their full text: plain text, one <p> per paragraph, then the link. */
+/**
+ * Notes are short, so the feed carries their full text: plain text, one <p> per paragraph, then the link. Code
+ * blocks are kept, and links read "text (url)" with relative URLs made absolute, since a feed reader has no page
+ * to resolve them against.
+ */
 export function noteFeedItem(note: Note): FeedItem {
   const body = note.body ?? '';
-  const html = markdownToPlain(body)
+  const url = absoluteUrl(entryPath('notes', note.id));
+  const html = markdownToPlain(body, { keepCode: true, linkUrls: true, baseUrl: url })
     .split('\n\n')
     .filter(Boolean)
     .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`);
@@ -198,7 +203,7 @@ export function noteFeedItem(note: Note): FeedItem {
   if (link) html.push(`<p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>`);
   return {
     title: noteTitle(note),
-    link: absoluteUrl(entryPath('notes', note.id)),
+    link: url,
     pubDate: note.data.published,
     description: excerpt(body, 280) || undefined,
     content: html.join('') || undefined,
