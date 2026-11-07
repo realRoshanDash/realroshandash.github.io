@@ -13,7 +13,6 @@ import PostListEmpty from '@/components/writing/PostListEmpty.astro';
 import { getPostItems, WRITING_DESCRIPTION, WRITING_FEED } from '@/components/writing/posts';
 import { getTags } from '@/lib/content';
 import { linkTo } from '@/lib/routes';
-import { SITE } from '@/data/site';
 
 const items = await getPostItems();
 const tags = await getTags('blog');
@@ -21,7 +20,6 @@ const featured = items.find((item) => item.post.data.featured);
 ---
 
 <Base title="Writing" description={WRITING_DESCRIPTION}>
-  <link slot="head" rel="alternate" type="application/rss+xml" title={`${SITE.name} — Writing`} href={WRITING_FEED} />
   <IndexHead route="/blog" title="Writing" desc={WRITING_DESCRIPTION} rss={WRITING_FEED} />
   <div class="wrap writing">
     <TagFilter total={items.length} tags={tags} />

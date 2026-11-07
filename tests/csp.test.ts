@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { describe, test } from 'node:test';
-import { applyCsp, decodeEntities, pagePolicy, parsePolicy, scanHtml, sha256 } from '../src/integrations/csp.ts';
+import { allows, applyCsp, decodeEntities, pagePolicy, parsePolicy, scanHtml, sha256, srcsetUrls } from '../src/integrations/csp.ts';
 
 const hash = (text: string) => `'sha256-${createHash('sha256').update(text).digest('base64')}'`;
 const page = (head: string, body = '') =>
@@ -143,6 +143,71 @@ describe('applyCsp', () => {
   test('fails the build rather than ship a page the policy would break', () => {
     assert.throws(() => applyCsp(page('', '<a href="#" onclick="go()">x</a>')), /event handlers/);
     assert.throws(() => applyCsp('<html><head><title>x</title></head></html>'), /meta charset/);
+  });
+
+  test('fails the build on markup that loads from an origin its policy blocks (a badge image, an embedded video)', () => {
+    const badge = '<p><img src="https://img.shields.io/badge/build-passing-brightgreen" alt="build status"></p>';
+    assert.throws(() => applyCsp(page('', badge)), /<img src> https:\/\/img\.shields\.io\/\S+ \(img-src 'self' data:\)/);
+    const video = '<iframe src="https://www.youtube-nocookie.com/embed/abc" title="Talk"></iframe>';
+    // no frame-src in the policy: default-src decides
+    assert.throws(() => applyCsp(page('', video)), /<iframe src> https:\/\/www\.youtube-nocookie\.com\/embed\/abc \(default-src 'self'\)/);
+    const candidates = '<picture><source srcset="/a.avif 1x, https://cdn.example/b.avif 2x"><img src="/a.jpg" alt=""></picture>';
+    assert.throws(() => applyCsp(page('', candidates)), /<source srcset> https:\/\/cdn\.example\/b\.avif/);
+    assert.throws(() => applyCsp(page('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">')), /style-src/);
+    assert.throws(() => applyCsp(page('<script type="module" src="https://cdn.example/x.js"></script>')), /script-src/);
+    assert.throws(() => applyCsp(page('', '<object data="/doc.pdf"></object>')), /object-src 'none'/);
+    assert.throws(() => applyCsp(page('', '<form action="https://forms.example/submit"></form>')), /form-action/);
+  });
+
+  test("what the site loads itself passes: relative and same-origin URLs, data: images, the font preload, a component's data-csp origin", () => {
+    const ok = page(
+      '<link rel="preload" href="/_astro/fonts/a.woff2" as="font" type="font/woff2" crossorigin>' +
+        '<link rel="icon" href="/favicon.svg"><link rel="manifest" href="/site.webmanifest">' +
+        '<link rel="stylesheet" href="/_astro/index.css"><script type="module" src="/_astro/page.js"></script>',
+      '<picture><source type="image/avif" srcset="/_astro/a_1.avif 640w, /_astro/a_2.avif 960w" sizes="100vw">' +
+        '<img src="https://roshandash.com/_astro/a_2.webp" srcset="/_astro/a_1.webp 640w,/_astro/a_2.webp 960w" alt=""></picture>' +
+        '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt=""><a href="https://github.com/roshandash411">GitHub</a>' +
+        '<form action="mailto:someone"></form><iframe src="about:blank" title="x"></iframe>' +
+        '<figure data-csp="frame-src https://www.youtube-nocookie.com"><iframe src="https://www.youtube-nocookie.com/embed/abc" title="Talk"></iframe></figure>',
+    );
+    assert.doesNotThrow(() => applyCsp(ok));
+  });
+});
+
+describe('allows', () => {
+  const self = new URL('https://roshandash.com');
+  const policy = (text: string) => parsePolicy(text);
+  const url = (href: string) => new URL(href, self);
+
+  test("'self', schemes, hosts with wildcards, ports and paths, as CSP matches them", () => {
+    const p = policy(
+      "default-src 'self'; img-src 'self' data: https://*.githubusercontent.com; script-src https://unpkg.com/@sveltia/cms@0.261.0/ https://cdn.example/one.js",
+    );
+    assert.ok(allows(p, 'img-src', url('/x.png'), self));
+    assert.ok(allows(p, 'img-src', url('data:image/png;base64,AA=='), self));
+    assert.ok(allows(p, 'img-src', url('https://avatars.githubusercontent.com/u/1'), self));
+    assert.ok(!allows(p, 'img-src', url('https://githubusercontent.com.evil.example/x'), self));
+    assert.ok(!allows(p, 'img-src', url('http://avatars.githubusercontent.com/u/1'), self), 'no downgrade to http');
+    assert.ok(allows(p, 'script-src-elem', url('https://unpkg.com/@sveltia/cms@0.261.0/dist/chunks/git.js'), self));
+    assert.ok(!allows(p, 'script-src-elem', url('https://unpkg.com/@sveltia/cms@0.262.0/dist/sveltia-cms.js'), self));
+    assert.ok(allows(p, 'script-src-elem', url('https://cdn.example/one.js'), self));
+    assert.ok(!allows(p, 'script-src-elem', url('https://cdn.example/two.js'), self));
+    assert.ok(!allows(p, 'script-src-elem', url('https://cdn.example:8443/one.js'), self));
+    assert.ok(allows(p, 'font-src', url('/f.woff2'), self), 'falls back to default-src');
+    assert.ok(!allows(policy("object-src 'none'"), 'object-src', url('/a.swf'), self));
+    // paths compare percent-decoded on both sides (a version range in a source path has to be written %5E)
+    const range = policy('script-src https://unpkg.com/wasm-feature-detect@%5E1.2.11');
+    assert.ok(allows(range, 'script-src-elem', url('https://unpkg.com/wasm-feature-detect@^1.2.11?module'), self));
+    assert.ok(!allows(range, 'script-src-elem', url('https://unpkg.com/wasm-feature-detect@^2.0.0?module'), self));
+  });
+
+  test('srcset candidates: URLs only, with or without descriptors and spaces', () => {
+    assert.deepEqual(srcsetUrls('/a.avif 640w, /b.avif 960w'), ['/a.avif', '/b.avif']);
+    assert.deepEqual(srcsetUrls('/a.webp 1x,/b.webp 2x'), ['/a.webp', '/b.webp']);
+    assert.deepEqual(srcsetUrls('/a.webp, /b.webp'), ['/a.webp', '/b.webp']);
+    // as browsers parse it: a comma inside a run of non-space characters is part of the URL
+    assert.deepEqual(srcsetUrls('/a.webp,/b.webp 2x'), ['/a.webp,/b.webp']);
+    assert.deepEqual(srcsetUrls('  https://x.example/a.png  '), ['https://x.example/a.png']);
   });
 });
 

@@ -4,7 +4,7 @@
  * a generative "spec" plate with no stock imagery: the post number in thin numerals followed by the dash, the
  * number and first tag above, minutes and date below, framed by crop marks. 16:10 either way.
  */
-import { Picture } from 'astro:assets';
+import Photo from '@/components/ui/Photo.astro';
 import type { PostItem } from './posts';
 
 interface Props {
@@ -19,14 +19,7 @@ const kicker = [`No. ${item.noLabel}`, item.tags[0]?.label].filter(Boolean).join
 
 {cover ? (
   <div class="cover cover--image">
-    <Picture
-      src={cover}
-      alt={coverAlt ?? ''}
-      widths={[480, 720, 960, 1280]}
-      sizes={sizes}
-      formats={['avif', 'webp']}
-      quality={70}
-    />
+    <Photo src={cover} alt={coverAlt ?? ''} widths={[480, 720, 960, 1280]} sizes={sizes} />
   </div>
 ) : (
   <div class="cover cover--spec" aria-hidden="true">

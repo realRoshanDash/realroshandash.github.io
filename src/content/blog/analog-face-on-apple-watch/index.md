@@ -6,18 +6,14 @@ tags: [productivity, focus]
 cover: apple-watch.jpg
 coverAlt: My Apple Watch with a simple analog face
 # Restored from the 2021 site (removed in 2025). Set to false to publish again.
+# Trimmed in 2026 to the site's rules (professional only): the price paid and other personal details are out.
+# The 2021 text is in git history (tag legacy-vuepress).
 draft: true
 ---
 
-### First things first
-
-Apple products are really expensive due to extra import taxes in India. My aluminium apple watch CELLULAR + Milanese band costed me INR 60000 which translates to roughly \$ 810
-
 ### What do I use the Apple Watch for ?
 
-I wear my apple watch every single day and literally all the time from the time I wake up till I sleep. Being able to charge it only while I freshen up and have my breakfast or while I'm sleeping/napping.
-
-I use my apple watch for a plethora of tasks and love its simplicity along with its ability to do immensely complex tasks for a device so small. I regularly use it listen to music without my phone, use it for taking calls, use it to monitor my workouts, use it to view the calendar, use it to view my reminders and some workout notes on the draft app and the stock prices and if i need to carry an umbrella and the list goes on.
+I use my apple watch for a plethora of tasks and love its simplicity along with its ability to do immensely complex tasks for a device so small. I regularly use it listen to music without my phone, use it for taking calls, use it to view the calendar, use it to view my reminders and if i need to carry an umbrella and the list goes on.
 
 ### Now lets get to the point
 

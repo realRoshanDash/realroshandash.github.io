@@ -1,11 +1,13 @@
 /**
  * The CMS page and crawlers: robots.txt has to let crawlers fetch /admin/ so that they see its
- * noindex, and the page has to load one exact Sveltia CMS build, checked with Subresource Integrity.
+ * noindex, and the page has to load one exact Sveltia CMS build, checked with Subresource Integrity,
+ * under a Content-Security-Policy that pins what it may import later to exact versions.
  * Run: node --test tests/admin.test.ts
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
+import { decodeEntities, parsePolicy } from '../src/integrations/csp.ts';
 import { GET } from '../src/pages/robots.txt.ts';
 
 describe('robots.txt', () => {
@@ -36,5 +38,22 @@ describe('/admin/ page', () => {
     assert.match(tag, /\sintegrity="sha384-[A-Za-z0-9+/]{64}"/);
     assert.match(tag, /\scrossorigin="anonymous"/);
     assert.doesNotMatch(tag, /\stype="module"/); // Sveltia ships a classic script
+  });
+
+  test('has its own Content-Security-Policy, before the script: no inline script or eval, only pinned unpkg versions', () => {
+    const meta = /<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(html);
+    assert.ok(meta, 'policy meta');
+    assert.ok(html.indexOf(meta[0]) < html.indexOf('<script'), 'the policy comes before the script');
+    const policy = parsePolicy(decodeEntities(meta[1]));
+    assert.deepEqual(policy.get('default-src'), ["'none'"]);
+    assert.deepEqual(policy.get('object-src'), ["'none'"]);
+    const scripts = policy.get('script-src') ?? [];
+    assert.ok(!scripts.some((source) => ["'unsafe-inline'", "'unsafe-eval'", "'strict-dynamic'", 'https:', '*', 'https://unpkg.com'].includes(source)));
+    const src = /<script\b[^>]*\ssrc="([^"]+)"/.exec(html)?.[1] ?? '';
+    const version = /@sveltia\/cms@(\d+\.\d+\.\d+)\//.exec(src)?.[1];
+    assert.ok(scripts.includes(`https://unpkg.com/@sveltia/cms@${version}/`), 'the CMS version the script loads');
+    for (const source of scripts.filter((s) => s.startsWith('https://'))) {
+      assert.match(source, /^https:\/\/unpkg\.com\/(?:@[a-z0-9-]+\/)?[a-z0-9.-]+@(?:\d+\.\d+\.\d+\/|%5E[\d.]+)$/, source);
+    }
   });
 });

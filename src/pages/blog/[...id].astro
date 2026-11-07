@@ -6,7 +6,8 @@
  * dev and SHOW_DRAFTS=1 previews (noindex, with a DRAFT badge).
  */
 import { render } from 'astro:content';
-import { Image, Picture } from 'astro:assets';
+import { Image } from 'astro:assets';
+import Photo from '@/components/ui/Photo.astro';
 import Base from '@/layouts/Base.astro';
 import Toc, { type TocItem } from '@/components/writing/Toc.astro';
 import BackPage from '@/components/writing/BackPage.astro';
@@ -92,7 +93,6 @@ const ld = {
     <meta property="article:published_time" content={item.iso} />
     {item.updatedIso && <meta property="article:modified_time" content={item.updatedIso} />}
     {item.tags.map((tag) => <meta property="article:tag" content={tag.label} />)}
-    <link rel="alternate" type="application/rss+xml" title={`${SITE.name} — Writing`} href={WRITING_FEED} />
     <script type="application/ld+json" set:html={jsonLd(ld)} />
   </Fragment>
 
@@ -161,15 +161,14 @@ const ld = {
       <figure class:list={['post-cover wrap', { 'post-cover--upright': upright }]}>
         <div class="g">
           <div class="post-cover__frame">
-            <Picture
+            {/* the page's LCP image: fetched first; an upright cover spans cols 3–7, about 38vw */}
+            <Photo
               src={cover}
               alt={coverAlt ?? ''}
               widths={[640, 960, 1280, 1600]}
-              sizes="(min-width: 1024px) 60vw, 100vw"
-              formats={['avif', 'webp']}
-              quality={75}
+              sizes={upright ? '(min-width: 1024px) 38vw, 100vw' : '(min-width: 1024px) 60vw, 100vw'}
               loading="eager"
-              decoding="async"
+              fetchpriority="high"
             />
           </div>
         </div>

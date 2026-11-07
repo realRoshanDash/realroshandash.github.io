@@ -1,0 +1,55 @@
+---
+/**
+ * A responsive photo for posts (covers, figures, post cards): AVIF and WebP sources from one imported image, each
+ * at the quality that suits it. sharp's AVIF at a WebP-like quality number comes out 1.6–1.8× larger than the
+ * WebP (q75: 104 KB against 64 KB at 960w for a typical photo), and every AVIF-capable browser picks the AVIF, so
+ * AVIF is encoded at q50 (42 KB there) and WebP, the fallback, at q75. Astro's <Picture> takes one quality for
+ * all formats; the hero portrait does the same per-format encoding by hand (Hero.astro).
+ *
+ * Widths above the original's are dropped (the original's own width stands in), and the <img> fallback is the
+ * largest WebP of the set, so no extra full-size file is generated. Re-encoding drops the original's metadata.
+ */
+import { getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  src: ImageMetadata;
+  alt: string;
+  widths: number[];
+  sizes: string;
+  loading?: 'eager' | 'lazy';
+  decoding?: 'async' | 'sync' | 'auto';
+  /** "high" for the page's LCP image (a post's cover) */
+  fetchpriority?: 'high' | 'low' | 'auto';
+  class?: string;
+}
+
+const { src, alt, widths, sizes, loading = 'lazy', decoding = 'async', fetchpriority, class: className } = Astro.props;
+
+const AVIF_QUALITY = 50;
+const WEBP_QUALITY = 75;
+
+const fitting = widths.filter((width) => width <= src.width);
+const set = fitting.length && fitting.length === widths.length ? fitting : [...fitting, src.width];
+const largest = Math.max(...set);
+const [avif, webp] = await Promise.all([
+  getImage({ src, width: largest, widths: set, format: 'avif', quality: AVIF_QUALITY }),
+  getImage({ src, width: largest, widths: set, format: 'webp', quality: WEBP_QUALITY }),
+]);
+---
+
+<picture>
+  <source type="image/avif" srcset={avif.srcSet.attribute} sizes={sizes} />
+  <img
+    class={className}
+    src={webp.src}
+    srcset={webp.srcSet.attribute}
+    sizes={sizes}
+    width={src.width}
+    height={src.height}
+    alt={alt}
+    loading={loading}
+    decoding={decoding}
+    fetchpriority={fetchpriority}
+  />
+</picture>

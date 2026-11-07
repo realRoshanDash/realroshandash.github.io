@@ -3,6 +3,7 @@
  * src/lib/content.ts (draft policy, ordering, URLs); the display rules are in display.ts (pure, unit-tested).
  */
 import type { CollectionEntry } from 'astro:content';
+import { SITE } from '@/data/site';
 import { entryPath, getPosts } from '@/lib/content';
 import { formatDateISO } from '@/lib/format';
 import {
@@ -45,8 +46,14 @@ export interface PostItem {
   vt: string;
 }
 
-/** The writing feed (posts only). The site-wide feed is /rss.xml. */
-export const WRITING_FEED = '/blog/rss.xml';
+/**
+ * The feed: posts only. It is the site's one feed (Base.astro advertises it on every page), so writing pages link
+ * it and add no <link rel="alternate"> of their own. /blog/rss.xml serves the same channel for anyone who
+ * subscribed to it before it was folded in here.
+ */
+export const WRITING_FEED = '/rss.xml';
+/** Copy deck §7.4: the RSS channel's title */
+export const WRITING_FEED_TITLE = `${SITE.name} — Writing`;
 
 /** Copy deck §7.3 / §7.4 */
 export const WRITING_DESCRIPTION =

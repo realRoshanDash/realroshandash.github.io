@@ -33,7 +33,6 @@ const grouped = items.length > 5;
   title={`${label} · Writing`}
   description={`${pluralize(items.length, 'post')} tagged “${label}”: long-form notes by ${SITE.name}, a software engineer in ${SITE.location}.`}
 >
-  <link slot="head" rel="alternate" type="application/rss+xml" title={`${SITE.name} — Writing`} href={WRITING_FEED} />
   <IndexHead route={`/blog/tags/${tag.slug}`} eyebrow={`Tag · ${pluralize(items.length, 'post')}`} title={label} rss={WRITING_FEED} />
   <div class="wrap writing">
     <TagFilter total={all.length} tags={tags} current={tag.slug} />

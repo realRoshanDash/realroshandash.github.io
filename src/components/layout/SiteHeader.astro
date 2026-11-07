@@ -25,7 +25,7 @@ const items = (await getNav('header')).map((item) => {
 });
 ---
 
-<header class="site-header" id="top" data-header>
+<header class="site-header" data-header>
   <div class="wrap g site-header__in">
     <a class="brand" href="/" aria-label={`${SITE.name}, home`}>
       <span class="brand__dash" aria-hidden="true"></span><span class="brand__name">{SITE.name}</span>
@@ -72,7 +72,8 @@ const items = (await getNav('header')).map((item) => {
     transform-origin: left center;
     transition: transform var(--dur-4) var(--ease-out);
   }
-  .brand:hover .brand__dash { transform: translateY(1px) scaleX(1.6); }
+  /* 20px → 27px across the 10px gap: it stays 3px clear of the R (at 1.6 the bar ran into its stem) */
+  .brand:hover .brand__dash { transform: translateY(1px) scaleX(1.35); }
 
   .site-nav { grid-column: 5 / 10; display: flex; gap: clamp(20px, 2.4vw, 36px); }
   .site-nav a {
@@ -137,8 +138,10 @@ const items = (await getNav('header')).map((item) => {
     .site-tools { grid-column: 3 / 5; gap: 6px; }
   }
   :global(html.menu-open) { overflow: hidden; }
+  /* Forced colours turn backgrounds into Canvas: the dash and the current page's mark are drawn in CanvasText */
   @media (forced-colors: active) {
     .brand__dash { forced-color-adjust: none; background: CanvasText; }
+    .site-nav a[aria-current='page']::after { forced-color-adjust: none; background: CanvasText; }
   }
 </style>
 

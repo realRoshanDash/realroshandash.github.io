@@ -16,9 +16,12 @@ import {
   isApplePlatform,
   matchEntry,
   resultCount,
+  routeParts,
+  tidyExcerpt,
   type PaletteData,
   type PaletteGroup,
   type Range,
+  type Segment,
 } from '../lib/palette.ts';
 
 interface Item {
@@ -34,8 +37,8 @@ interface Item {
   /** Preview pane. */
   route?: string;
   description?: string;
-  /** Pagefind excerpt: text with <mark> around the matches. */
-  excerpt?: string;
+  /** Pagefind excerpt (posts only), tidied: text runs and the matches. */
+  excerpt?: Segment[];
   info?: string;
   keywords?: readonly string[];
   run?: () => void;
@@ -47,6 +50,8 @@ interface Item {
 interface PagefindData {
   url: string;
   excerpt: string;
+  /** the page's indexed text */
+  content?: string;
   /** title, plus date and minutes on posts (data-pagefind-meta in src/pages/blog/[...id].astro) */
   meta: { title?: string; date?: string; minutes?: string };
   sub_results?: { title: string; url: string; excerpt: string; locations?: number[] }[];
@@ -89,25 +94,27 @@ function span(className: string, text?: string): HTMLSpanElement {
   return el;
 }
 
-/** Pagefind's excerpt as DOM: text, plus <mark> for the matches. Nothing else survives. */
-function excerptNodes(html: string): Node[] {
+/** Pagefind's excerpt (HTML) as runs: text, and the matches it wraps in <mark>. Nothing else survives. */
+function excerptSegments(html: string): Segment[] {
   const template = document.createElement('template');
   template.innerHTML = html;
-  return [...template.content.childNodes].map((node) => {
-    if (node.nodeName !== 'MARK') return document.createTextNode(node.textContent ?? '');
-    const mark = document.createElement('mark');
-    mark.textContent = node.textContent;
-    return mark;
+  return [...template.content.childNodes].map((node) => ({ text: node.textContent ?? '', mark: node.nodeName === 'MARK' }));
+}
+
+function segmentNodes(segments: readonly Segment[]): Node[] {
+  return segments.map(({ text, mark }) => {
+    if (!mark) return document.createTextNode(text);
+    const el = document.createElement('mark');
+    el.textContent = text;
+    return el;
   });
 }
 
-function marked(text: string, ranges: readonly Range[]): Node[] {
-  return highlight(text, ranges).map(({ text: run, mark }) => {
-    if (!mark) return document.createTextNode(run);
-    const el = document.createElement('mark');
-    el.textContent = run;
-    return el;
-  });
+const marked = (text: string, ranges: readonly Range[]): Node[] => segmentNodes(highlight(text, ranges));
+
+/** A route that may wrap only after its slashes (narrow rows show it in full on two lines rather than cut). */
+function routeNodes(route: string): Node[] {
+  return routeParts(route).flatMap((part, i) => (i ? [document.createElement('wbr'), document.createTextNode(part)] : [document.createTextNode(part)]));
 }
 
 const pathOf = (url: string) => new URL(url, location.origin).pathname;
@@ -297,15 +304,22 @@ export function mount(dialog: HTMLDialogElement) {
     const base = post ?? page;
     // Only the latest posts ship with the page (palette-data.ts): older ones read their date and minutes from the index.
     const { date, minutes } = result.meta;
+    const group: PaletteGroup = post || (/^\/blog\/(?!tags\/)[^/]+\/$/.test(path) && !page) ? 'writing' : 'pages';
+    const label = base?.label ?? result.meta.title ?? displayRoute(path, location.origin);
+    const tag = /^\/blog\/tags\/[^/]+\/$/.test(path);
+    // A page's indexed text is mostly its chrome ("RSS feed. Nothing published yet."), so only posts show the
+    // excerpt; pages keep their own description (a tag page gets one from its name).
+    const excerpt = group === 'writing' ? tidyExcerpt(excerptSegments(deep?.excerpt ?? result.excerpt), result.content) : [];
     return {
       key: path,
-      group: post || (/^\/blog\/(?!tags\/)[^/]+\/$/.test(path) && !page) ? 'writing' : 'pages',
-      label: base?.label ?? result.meta.title ?? displayRoute(path, location.origin),
+      group,
+      label,
       url: deep?.url ?? result.url,
       meta: base?.meta ?? (minutes ? `${minutes} min` : displayRoute(path, location.origin)),
       metaIsRoute: base ? base.metaIsRoute : !minutes,
       route: displayRoute(path, location.origin),
-      excerpt: deep?.excerpt ?? result.excerpt,
+      excerpt: excerpt.length ? excerpt : undefined,
+      description: base?.description ?? (tag ? `Posts tagged “${label}”.` : undefined),
       info: [base?.info ?? (date && minutes ? `${date} · ${minutes} min` : undefined), deep && deep.title !== result.meta.title ? `Section · ${deep.title}` : '']
         .filter(Boolean).join(' · ') || undefined,
       score: post ? SCORE_POST_HIT : SCORE_PAGE_HIT,
@@ -353,7 +367,9 @@ export function mount(dialog: HTMLDialogElement) {
     for (const hit of found) {
       const known = byKey.get(hit.key);
       if (known) {
-        Object.assign(known, { url: hit.url, excerpt: hit.excerpt, info: hit.info ?? known.info, score: Math.max(known.score, hit.score) });
+        // a static page keeps its curated description; a post shows where the match is
+        Object.assign(known, { url: hit.url, info: hit.info ?? known.info, score: Math.max(known.score, hit.score) });
+        if (hit.excerpt) known.excerpt = hit.excerpt;
         continue;
       }
       const titled = matchEntry(q, hit.label);
@@ -375,7 +391,11 @@ export function mount(dialog: HTMLDialogElement) {
   }
 
   /* ---------------------------------------------------------------- rendering */
-  function render(next: Item[], { q, ms, settled }: { q: string; ms?: number; settled: boolean }) {
+  /** `announce: false` re-renders in place without reading the count out again (spec §4.5: state changes only). */
+  function render(
+    next: Item[],
+    { q, ms, settled, announce: speak = true }: { q: string; ms?: number; settled: boolean; announce?: boolean },
+  ) {
     const keep = shownQuery === q ? items[active]?.key : undefined;
     const groups = arrange(next, q !== '');
     items = groups.flatMap((group) => group.items);
@@ -415,7 +435,7 @@ export function mount(dialog: HTMLDialogElement) {
 
     const kept = keep ? items.findIndex((item) => item.key === keep) : -1;
     select(kept >= 0 ? kept : 0, kept < 0);
-    if (q && settled) {
+    if (q && settled && speak) {
       clearTimeout(announceTimer);
       announceTimer = window.setTimeout(() => announce(items.length ? resultCount(items.length) : 'No results'), ANNOUNCE_DELAY);
     }
@@ -441,13 +461,15 @@ export function mount(dialog: HTMLDialogElement) {
     if (item.external) label.append(icon(ARROW_UP_RIGHT));
     const main = span('palette__main');
     main.append(label);
-    const sub = item.excerpt ? excerptNodes(item.excerpt) : item.group === 'writing' && item.description ? [document.createTextNode(item.description)] : null;
+    const sub = item.excerpt ? segmentNodes(item.excerpt) : item.group === 'writing' && item.description ? [document.createTextNode(item.description)] : null;
     if (sub) {
       const line = span('palette__sub');
       line.append(...sub);
       main.append(line);
     }
-    el.append(n, main, span(item.metaIsRoute ? 'palette__meta palette__meta--route' : 'palette__meta', item.meta));
+    const meta = span(item.metaIsRoute ? 'palette__meta palette__meta--route' : 'palette__meta');
+    if (item.meta) meta.append(...(item.metaIsRoute ? routeNodes(item.meta) : [document.createTextNode(item.meta)]));
+    el.append(n, main, meta);
     options.push(el);
     return el;
   }
@@ -473,7 +495,7 @@ export function mount(dialog: HTMLDialogElement) {
   function show(item: Item | null) {
     preview.route.textContent = item?.route ?? '';
     preview.title.textContent = item?.label ?? '';
-    preview.desc.replaceChildren(...(item?.excerpt ? excerptNodes(item.excerpt) : [document.createTextNode(item?.description ?? '')]));
+    preview.desc.replaceChildren(...(item?.excerpt ? segmentNodes(item.excerpt) : [document.createTextNode(item?.description ?? '')]));
     preview.meta.textContent = item?.info ?? '';
   }
 
@@ -525,10 +547,11 @@ export function mount(dialog: HTMLDialogElement) {
     });
   }
 
-  /** Re-render the current query in place (an action changed a label), keeping the selection. */
+  /** Re-render the current query in place (an action changed a label), keeping the selection. The count hasn't
+   *  changed, so it isn't announced again ("Link copied." is the news). */
   function refresh() {
-    if (!query) return render(idle(), { q: '', settled: true });
-    render(merge(local(query), hits.q === query ? hits.items : [], query), { q: query, settled: true });
+    if (!query) return render(idle(), { q: '', settled: true, announce: false });
+    render(merge(local(query), hits.q === query ? hits.items : [], query), { q: query, settled: true, announce: false });
   }
 
   /* ---------------------------------------------------------------- opening, closing, activating */

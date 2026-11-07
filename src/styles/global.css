@@ -13,6 +13,9 @@ html {
   overflow-x: clip;
   scroll-padding-top: calc(var(--nav-h) + 24px);
 }
+/* The sticky header's own controls are always in view, but they sit inside that padding: without this, focusing
+   one on a scrolled page (Tab, Shift+Tab, Esc closing the menu) scrolls the page by up to half a screen. */
+.site-header :is(a, button) { scroll-margin-top: calc(-1 * (var(--nav-h) + 24px)); }
 body {
   margin: 0;
   min-height: 100svh;
@@ -189,12 +192,17 @@ kbd {
   .chip, .chip-btn { height: 40px; }
 }
 
-/* Print (§8.6) */
+/* Print (§8.6). Backgrounds don't print by default, so every surface prints as ink on white paper: the page, the
+   inverted band (which otherwise keeps its dark set, pale type on paper with its two tones reversed) and the rest.
+   The two dark prints keep their own backgrounds: the transcript's light text, and the studio backdrop the hero
+   cut-out is made for (on white it shows a halo round the hair and the fade of the left arm). */
 @media print {
-  :root, :root[data-theme] {
+  :root, :root[data-theme],
+  :root .invert, :root[data-theme] .invert, :root:not([data-theme]) .invert {
     --bg: #fff; --bg-raised: #fff; --fg: #000; --fg-2: #333; --fg-3: #555;
     --rule: #ccc; --rule-2: #999; color-scheme: light;
   }
+  .transcript, .plate__backdrop { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .site-header, .site-footer, .gridlines, .toc, .toc-mobile, .back-page, .mobile-menu, .palette,
   .gate, .hero__cta, .read-progress, .skip { display: none !important; }
   .hero__name .line--dash::after { display: none; }

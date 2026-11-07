@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { displayRoute, highlight, isApplePlatform, matchEntry, mergeRanges, resultCount } from '../src/lib/palette.ts';
+import { displayRoute, highlight, isApplePlatform, matchEntry, mergeRanges, resultCount, routeParts, tidyExcerpt } from '../src/lib/palette.ts';
 
 describe('matchEntry', () => {
   test('ranks a label prefix over a word start over a match inside a word', () => {
@@ -82,6 +82,34 @@ describe('displayRoute', () => {
   test('other origins read as host + path', () => {
     assert.equal(displayRoute('https://github.com/roshandash411'), 'github.com/roshandash411');
     assert.equal(displayRoute('https://www.linkedin.com/in/roshan-dash'), 'linkedin.com/in/roshan-dash');
+  });
+
+  test('a route may wrap only after an inner slash', () => {
+    assert.deepEqual(routeParts('linkedin.com/in/roshan-dash'), ['linkedin.com/', 'in/', 'roshan-dash']);
+    assert.deepEqual(routeParts('/blog/tags/java'), ['/blog/', 'tags/', 'java']);
+    assert.deepEqual(routeParts('/rss.xml'), ['/rss.xml']);
+    assert.deepEqual(routeParts('/'), ['/']);
+  });
+});
+
+describe('tidyExcerpt', () => {
+  const text = (segments: { text: string; mark: boolean }[]) => segments.map((s) => (s.mark ? `[${s.text}]` : s.text)).join('');
+  const content = 'From hating vim to loving vim. I used to dread vim. Then I watched a senior engineer use it, very efficiently.';
+
+  test('mid-sentence: leading dashes and punctuation go, and "…" says the text starts earlier', () => {
+    assert.equal(text(tidyExcerpt([{ text: '— Agents inside each stage: ', mark: false }, { text: 'plan', mark: true }], 'x')), '…Agents inside each stage: [plan]');
+    assert.equal(text(tidyExcerpt([{ text: 'engineer use it, very ', mark: false }, { text: 'efficiently', mark: true }], content)), '…engineer use it, very [efficiently]');
+    assert.equal(text(tidyExcerpt([{ text: ', · ', mark: false }, { text: 'vim', mark: true }, { text: ' rocks', mark: false }])), '…[vim] rocks');
+  });
+
+  test("no ellipsis where the excerpt starts the page's text or a sentence in it", () => {
+    assert.equal(text(tidyExcerpt([{ text: 'From hating ', mark: false }, { text: 'vim', mark: true }], content)), 'From hating [vim]');
+    assert.equal(text(tidyExcerpt([{ text: 'I used to dread ', mark: false }, { text: 'vim', mark: true }], content)), 'I used to dread [vim]');
+  });
+
+  test('opening quotes stay; an empty excerpt stays empty', () => {
+    assert.equal(text(tidyExcerpt([{ text: '“Exactly-once” is a lie', mark: false }], '“Exactly-once” is a lie')), '“Exactly-once” is a lie');
+    assert.deepEqual(tidyExcerpt([{ text: ' — ', mark: false }]), []);
   });
 });
 

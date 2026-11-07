@@ -16,6 +16,11 @@
  * frame-src https://embed.example"` on any element adds those sources to the policy of the pages it is rendered
  * on, and nowhere else (the dormant chart facade uses it for its click-to-load embed).
  *
+ * The pass also checks every URL the markup itself loads (img and source srcsets, video, audio, iframes, embeds,
+ * scripts, stylesheets, preloads, icons, the manifest, form actions) against the directive that governs it, and
+ * fails the build on one the policy would block: a remote image or an embedded video in a post builds green
+ * otherwise, and the browser then drops it in production without a word.
+ *
  * Not possible from a meta tag: frame-ancestors, report-to and sandbox (browsers ignore them there). `astro dev`
  * runs without a policy; check it with `npm run build && npm run preview`.
  */
@@ -23,8 +28,12 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
+import { SITE } from '../data/site.ts';
 
 export type Policy = Record<string, readonly string[]>;
+
+/** The origin pages are served from ('self'), which relative URLs resolve against. */
+const SITE_URL: string = SITE.url;
 
 /**
  * The site's policy. Hashes are added per page: script-src gets the page's inline scripts, style-src its <style>
@@ -61,6 +70,8 @@ export interface PageScan {
   extensions: string[];
   /** Inline event-handler attributes (onclick…): the policy would block them, so they fail the build instead. */
   handlers: string[];
+  /** URLs the markup loads, each with the directive that governs it (before fallbacks). */
+  resources: Resource[];
   /** Offset just after <meta charset>, the first element in <head>, where the policy goes; -1 if not found. */
   insertAt: number;
   /** CSP metas already in the page (replaced, so running the pass twice changes nothing). */
@@ -95,6 +106,14 @@ export function decodeEntities(value: string): string {
     if (char === undefined) throw new Error(`csp: unsupported character reference ${ref} in a hashed attribute`);
     return char;
   });
+}
+
+export interface Resource {
+  /** e.g. '<img src>' */
+  where: string;
+  /** as written (entities decoded) */
+  url: string;
+  directive: string;
 }
 
 interface Tag {
@@ -147,11 +166,103 @@ function endTagAt(html: string, name: string, from: number): number {
   return re.exec(html)?.index ?? html.length;
 }
 
+/** The URLs of a srcset: each candidate's URL, without its width or density descriptor. */
+export function srcsetUrls(srcset: string): string[] {
+  const urls: string[] = [];
+  let i = 0;
+  while (i < srcset.length) {
+    while (i < srcset.length && (SPACE.test(srcset[i]) || srcset[i] === ',')) i++;
+    let url = '';
+    while (i < srcset.length && !SPACE.test(srcset[i])) url += srcset[i++];
+    // a URL directly followed by a comma has no descriptors
+    const bare = url.match(/,+$/);
+    if (bare) url = url.slice(0, -bare[0].length);
+    else while (i < srcset.length && srcset[i] !== ',') i++;
+    if (url) urls.push(url);
+  }
+  return urls;
+}
+
+const PRELOAD_AS: Record<string, string> = {
+  script: 'script-src-elem', style: 'style-src-elem', font: 'font-src', image: 'img-src', fetch: 'connect-src',
+  audio: 'media-src', video: 'media-src', track: 'media-src', worker: 'worker-src', document: 'frame-src',
+};
+
+/** The URL attributes of one start tag that the browser fetches, and the directive each one falls under. */
+function tagResources(tag: Tag, media: string | null): Resource[] {
+  const out: Resource[] = [];
+  const add = (attr: string, directive: string, list = false) => {
+    const raw = tag.attrs.get(attr);
+    if (raw === undefined || raw.trim() === '') return;
+    let value = raw;
+    try {
+      value = decodeEntities(raw);
+    } catch {
+      // an entity this pass doesn't decode: check the URL as written
+    }
+    for (const url of list ? srcsetUrls(value) : [value.trim()]) out.push({ where: `<${tag.name} ${attr}>`, url, directive });
+  };
+  switch (tag.name) {
+    case 'img':
+      add('src', 'img-src');
+      add('srcset', 'img-src', true);
+      break;
+    case 'source': {
+      const directive = media === 'video' || media === 'audio' ? 'media-src' : 'img-src';
+      add('src', directive);
+      add('srcset', directive, true);
+      break;
+    }
+    case 'video':
+      add('src', 'media-src');
+      add('poster', 'img-src');
+      break;
+    case 'audio':
+    case 'track':
+      add('src', 'media-src');
+      break;
+    case 'iframe':
+    case 'frame':
+      add('src', 'frame-src');
+      break;
+    case 'embed':
+      add('src', 'object-src');
+      break;
+    case 'object':
+      add('data', 'object-src');
+      break;
+    case 'script':
+      add('src', 'script-src-elem');
+      break;
+    case 'image': // SVG
+      add('href', 'img-src');
+      add('xlink:href', 'img-src');
+      break;
+    case 'form':
+      add('action', 'form-action');
+      break;
+    case 'base':
+      add('href', 'base-uri');
+      break;
+    case 'link': {
+      const rel = (tag.attrs.get('rel') ?? '').toLowerCase().split(SPACE);
+      if (rel.includes('stylesheet')) add('href', 'style-src-elem');
+      else if (rel.includes('modulepreload')) add('href', 'script-src-elem');
+      else if (rel.includes('preload')) add('href', PRELOAD_AS[(tag.attrs.get('as') ?? '').toLowerCase()] ?? 'default-src');
+      else if (rel.includes('icon') || rel.includes('apple-touch-icon')) add('href', 'img-src');
+      else if (rel.includes('manifest')) add('href', 'manifest-src');
+      break;
+    }
+  }
+  return out;
+}
+
 /** Everything in a page that its policy has to account for, and where the policy goes. */
 export function scanHtml(html: string): PageScan {
   const scan: PageScan = {
-    scripts: [], styles: [], styleAttrs: [], extensions: [], handlers: [], insertAt: -1, metas: [],
+    scripts: [], styles: [], styleAttrs: [], extensions: [], handlers: [], resources: [], insertAt: -1, metas: [],
   };
+  let media: string | null = null; // the open <picture>, <video> or <audio>, for its <source>s
   let foreign = 0;
   let headOpen = -1;
   let firstInHead = true;
@@ -173,6 +284,7 @@ export function scanHtml(html: string): PageScan {
       const close = html.indexOf('>', lt);
       const name = html.slice(lt + 2, close < 0 ? html.length : close).trim().split(SPACE)[0].toLowerCase();
       if (FOREIGN.has(name) && foreign > 0) foreign--;
+      if (name === media) media = null;
       i = close < 0 ? html.length : close + 1;
       continue;
     }
@@ -189,6 +301,8 @@ export function scanHtml(html: string): PageScan {
     const extension = tag.attrs.get('data-csp');
     if (extension) scan.extensions.push(decodeEntities(extension));
     for (const attr of tag.attrs.keys()) if (/^on[a-z]/.test(attr)) scan.handlers.push(`<${tag.name} ${attr}>`);
+    if (tag.name === 'picture' || tag.name === 'video' || tag.name === 'audio') media = tag.name;
+    scan.resources.push(...tagResources(tag, media));
 
     if (tag.name === 'head' && headOpen < 0) {
       headOpen = tag.end;
@@ -288,12 +402,112 @@ export function pagePolicy(page: PageScan, site: Policy = SITE_POLICY): string {
   return serializePolicy(policy);
 }
 
+/* ------------------------------------------------------------------ what a policy allows ---- */
+
+/** Where a directive that isn't in the policy takes its sources from (CSP3 §6.8.3). */
+const FALLBACK: Record<string, string[]> = {
+  'script-src-elem': ['script-src', 'default-src'],
+  'style-src-elem': ['style-src', 'default-src'],
+  'frame-src': ['child-src', 'default-src'],
+  'worker-src': ['child-src', 'script-src', 'default-src'],
+  'img-src': ['default-src'], 'media-src': ['default-src'], 'font-src': ['default-src'], 'object-src': ['default-src'],
+  'manifest-src': ['default-src'], 'connect-src': ['default-src'],
+};
+
+/** The directive that decides, and its sources; null when nothing does (form-action and base-uri don't fall back). */
+export function governing(policy: ReadonlyMap<string, readonly string[]>, directive: string): [string, readonly string[]] | null {
+  for (const name of [directive, ...(FALLBACK[directive] ?? [])]) {
+    const sources = policy.get(name);
+    if (sources) return [name, sources];
+  }
+  return null;
+}
+
+const DEFAULT_PORT: Record<string, string> = { 'http:': '80', 'https:': '443', 'ws:': '80', 'wss:': '443' };
+const percentDecoded = (path: string): string => {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+};
+
+/** Whether one source expression lets `url` load on a page served from `self` (CSP3 §6.7.2.8, host sources). */
+function sourceMatches(source: string, url: URL, self: URL): boolean {
+  const upgraded = (scheme: string) => url.protocol === scheme || (scheme === 'http:' && url.protocol === 'https:');
+  if (source === "'self'") return url.origin === self.origin || (url.host === self.host && upgraded(self.protocol));
+  if (source.startsWith("'")) return false; // hashes, nonces and keywords never allow a URL
+  if (source === '*') return /^(?:https?|wss?|ftp):$/.test(url.protocol);
+  if (/^[a-z][a-z0-9+.-]*:$/i.test(source)) return upgraded(source.toLowerCase());
+  const host = /^(?:([a-z][a-z0-9+.-]*):\/\/)?(\*|(?:\*\.)?[a-z0-9.-]+)(?::(\d+|\*))?(\/[^?#]*)?$/i.exec(source);
+  if (!host) return false;
+  const [, scheme, name, port, path] = host;
+  if (scheme ? !upgraded(`${scheme.toLowerCase()}:`) : !upgraded(self.protocol)) return false;
+  const wanted = name.toLowerCase();
+  if (wanted === '*') {
+    // matches any host
+  } else if (wanted.startsWith('*.')) {
+    if (!url.hostname.endsWith(wanted.slice(1))) return false;
+  } else if (url.hostname !== wanted) {
+    return false;
+  }
+  const urlPort = url.port || DEFAULT_PORT[url.protocol] || '';
+  if (port !== '*') {
+    const sourcePort = port ?? DEFAULT_PORT[scheme ? `${scheme.toLowerCase()}:` : self.protocol] ?? '';
+    if (urlPort !== sourcePort && !(sourcePort === '80' && urlPort === '443')) return false;
+  }
+  if (path && path !== '/') {
+    // both sides percent-decoded, as CSP compares paths: a source like …@%5E1.2 matches the URL …@^1.2
+    const want = percentDecoded(path);
+    const target = percentDecoded(url.pathname);
+    if (want.endsWith('/') ? !target.startsWith(want) : target !== want) return false;
+  }
+  return true;
+}
+
+/** Whether the policy lets the page at `self` load `url` under `directive` (with its fallbacks). */
+export function allows(policy: ReadonlyMap<string, readonly string[]>, directive: string, url: URL, self: URL): boolean {
+  // about:blank and about:srcdoc frames aren't fetched, so no policy applies to them
+  if (url.protocol === 'about:') return true;
+  const found = governing(policy, directive);
+  if (!found) return true;
+  const [, sources] = found;
+  if (sources.length === 1 && sources[0] === "'none'") return false;
+  return sources.some((source) => sourceMatches(source, url, self));
+}
+
+/** Markup in the page that its own policy would block: one line each, naming the URL and the directive. */
+export function blockedResources(page: PageScan, policy: ReadonlyMap<string, readonly string[]>, site: string): string[] {
+  const self = new URL(site);
+  const blocked: string[] = [];
+  for (const { where, url, directive } of page.resources) {
+    let target: URL;
+    try {
+      target = new URL(url, self);
+    } catch {
+      continue; // not a URL the browser would fetch either
+    }
+    if (allows(policy, directive, target, self)) continue;
+    const [name, sources] = governing(policy, directive) ?? [directive, []];
+    blocked.push(`${where} ${url} (${name} ${sources.join(' ')})`);
+  }
+  return blocked;
+}
+
 /** The page with its policy as the first thing after <meta charset>; an earlier policy meta is replaced. */
-export function applyCsp(html: string, site: Policy = SITE_POLICY): { html: string; policy: string } {
+export function applyCsp(html: string, site: Policy = SITE_POLICY, siteUrl = SITE_URL): { html: string; policy: string } {
   const page = scanHtml(html);
   if (page.handlers.length) throw new Error(`csp: inline event handlers would be blocked: ${page.handlers.join(', ')}`);
   if (page.insertAt < 0) throw new Error('csp: <meta charset> must be the first element in <head>');
   const policy = pagePolicy(page, site);
+  const blocked = blockedResources(page, parsePolicy(policy), siteUrl);
+  if (blocked.length) {
+    throw new Error(
+      `csp: the page's policy would block what its markup loads, which would then silently not show: ${blocked.join('; ')}. ` +
+        'Put the file in the repo next to the post (it is served from the site), or have the component that needs it ' +
+        'add the origin with data-csp.',
+    );
+  }
   // An earlier policy meta can only follow <meta charset> (that has to come first), so removing it, last first,
   // leaves the insertion point where it is.
   let out = html;
@@ -306,9 +520,13 @@ export function applyCsp(html: string, site: Policy = SITE_POLICY): { html: stri
 /* ------------------------------------------------------------------ integration ---- */
 
 export default function csp({ policy = SITE_POLICY }: { policy?: Policy } = {}): AstroIntegration {
+  let site: string = SITE_URL;
   return {
     name: 'csp',
     hooks: {
+      'astro:config:done': ({ config }) => {
+        if (config.site) site = config.site;
+      },
       // Only pages Astro rendered: files copied from public/ (the CMS at /admin/, old-URL redirects) are left alone.
       'astro:build:done': async ({ assets, logger }) => {
         const files = new Set([...assets.values()].flat().map((url) => fileURLToPath(url)));
@@ -317,7 +535,7 @@ export default function csp({ policy = SITE_POLICY }: { policy?: Policy } = {}):
         await Promise.all(
           pages.map(async (file) => {
             try {
-              const result = applyCsp(await readFile(file, 'utf8'), policy);
+              const result = applyCsp(await readFile(file, 'utf8'), policy, site);
               largest = Math.max(largest, result.policy.length);
               await writeFile(file, result.html);
             } catch (error) {

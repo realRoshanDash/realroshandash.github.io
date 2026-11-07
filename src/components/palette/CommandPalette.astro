@@ -161,7 +161,8 @@ const enter = 'M13 3.5V9H3.5M6.5 6 3.5 9l3 3';
   .palette__sub {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
   }
-  .palette__meta { max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  /* 30ch fits the longest route (linkedin.com/in/roshan-dash) */
+  .palette__meta { max-width: 30ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
   .palette__meta--route { font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--fs-mono-s); letter-spacing: 0; }
   .palette mark { background: none; color: inherit; box-shadow: inset 0 -2px 0 var(--signal-ui); }
 
@@ -215,12 +216,26 @@ const enter = 'M13 3.5V9H3.5M6.5 6 3.5 9l3 3';
     .palette__input { font-size: 16px; text-overflow: ellipsis; }
     .palette__esc { display: none; }
     .palette__close-text { position: static; width: auto; height: auto; overflow: visible; clip-path: none; padding: 0 8px; }
+    /* no preview pane to show a cut-off route in full: it wraps after its slashes (<wbr>, palette.ts) instead */
     .palette__meta { max-width: 36vw; }
+    .palette__meta--route { white-space: normal; overflow-wrap: anywhere; text-align: right; }
     .palette__foot { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
   }
   @media (hover: none) and (pointer: coarse) {
     .palette__hints { display: none; }
     .palette__foot:has(.palette__count:empty) { display: none; }
+  }
+  /* Forced colours: focus stays in the input, so the selected row's fill and bar are the only sign of what Enter
+     opens, and both would turn into Canvas (and every row's transparent bar into a visible one). The selection
+     takes the system highlight instead. */
+  @media (forced-colors: active) {
+    .palette__item { border-left-color: Canvas; }
+    .palette__item[aria-selected='true'] {
+      forced-color-adjust: none;
+      background: Highlight; color: HighlightText; border-left-color: Highlight;
+    }
+    .palette__item[aria-selected='true'] :is(.palette__n, .palette__meta, .palette__sub, .palette__label .icon, mark) { color: HighlightText; }
+    .palette__item[aria-selected='true'] mark { box-shadow: inset 0 -2px 0 HighlightText; }
   }
   @media print { .palette { display: none !important; } }
 </style>

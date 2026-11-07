@@ -26,8 +26,8 @@ const kicker = [item.tags[0]?.label, `${item.minutes} min`].filter(Boolean).join
       <a href={item.href}>{item.title}</a>
       {(item.archived || item.draft) && (
         <span class="post-card__badges">
-          {item.archived && <span class="badge badge--plain">From the archive</span>}
-          {item.draft && <span class="badge"><span class="badge__hatch" aria-hidden="true"></span>Draft</span>}
+          {item.archived && <>{' '}<span class="badge badge--plain">From the archive</span></>}
+          {item.draft && <>{' '}<span class="badge"><span class="badge__hatch" aria-hidden="true"></span>Draft</span></>}
         </span>
       )}
     </Heading>

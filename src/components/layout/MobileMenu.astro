@@ -64,4 +64,8 @@ const all = [{ label: 'Home', href: '/', current: homeCurrent }, ...items];
   .mobile-menu__links { display: flex; flex-wrap: wrap; gap: 4px 24px; font-size: 15px; }
   .mobile-menu__links a { min-height: 44px; }
   .clock { display: inline-block; min-inline-size: 9ch; font-variant-numeric: tabular-nums; }
+  /* Forced colours: the current page's number differs only in colour, so it is underlined there too */
+  @media (forced-colors: active) {
+    .mobile-menu__list a[aria-current='page'] { text-decoration: underline 2px; text-underline-offset: 4px; }
+  }
 </style>

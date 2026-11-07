@@ -7,7 +7,7 @@ import expressiveCode from 'astro-expressive-code';
 import { satteri } from '@astrojs/markdown-satteri';
 import satteriCallouts from 'satteri-callouts';
 import { SITE } from './src/data/site.ts';
-import pruneUnusedCss from './src/integrations/prune-unused-css.ts';
+import pruneUnusedAssets from './src/integrations/prune-unused-assets.ts';
 import csp from './src/integrations/csp.ts';
 import { normalizeHeadings } from './src/lib/markdown/normalize-headings.ts';
 import { wrapTables } from './src/lib/markdown/wrap-tables.ts';
@@ -33,10 +33,15 @@ export default defineConfig({
   trailingSlash: 'ignore',
   build: { format: 'directory' },
   prefetch: HTML_PAGES.length > 1 ? { prefetchAll: true, defaultStrategy: 'hover' } : false,
-  // Self-hosted from pinned Fontsource npm packages: no network at build time, metric-matched fallbacks, no layout
-  // shift. Inter is the only family people read: one variable file carries the weight axis (100–900) and the
-  // optical-size axis (opsz 14–32). Italic downloads only where italic text renders. JetBrains Mono is reserved
-  // for what machines say (code, routes, hashes).
+  // Self-hosted from pinned Fontsource npm packages: no network at build time, metric-matched fallbacks. Inter is
+  // the only family people read: one variable file carries the weight axis (100–900) and the optical-size axis
+  // (opsz 14–32). Italic downloads only where italic text renders. JetBrains Mono is reserved for what machines say
+  // (code, routes, hashes).
+  // The roman Inter is preloaded and `display: 'optional'`: a page uses it if it arrives within the first ~100 ms
+  // (it nearly always does, preloaded or cached), else keeps the fallback for that view, so text never re-wraps
+  // under the reader. With 'swap' the statements on /about/ and /contact/ re-wrapped when Inter landed late (CLS
+  // 0.10–0.22, budget 0.05), worst where local('Arial') doesn't exist (Linux, Android) and the fallback is
+  // unadjusted. Italic and mono stay 'swap': they set short runs that barely move.
   fonts: [
     {
       provider: fontProviders.local(),
@@ -45,7 +50,7 @@ export default defineConfig({
       fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'],
       options: {
         variants: [
-          { weight: '100 900', style: 'normal', display: 'swap', unicodeRange: [LATIN], src: ['@fontsource-variable/inter/files/inter-latin-opsz-normal.woff2'] },
+          { weight: '100 900', style: 'normal', display: 'optional', unicodeRange: [LATIN], src: ['@fontsource-variable/inter/files/inter-latin-opsz-normal.woff2'] },
           { weight: '100 900', style: 'italic', display: 'swap', unicodeRange: [LATIN], src: ['@fontsource-variable/inter/files/inter-latin-wght-italic.woff2'] },
         ],
       },
@@ -76,7 +81,7 @@ export default defineConfig({
     expressiveCode(),
     mdx(),
     sitemap({ filter: (page) => !/\/(admin|404)(\/|$)/.test(new URL(page).pathname) }),
-    pruneUnusedCss(), // unpublished sections (no pages) leave no stylesheets behind
+    pruneUnusedAssets(), // what no page uses isn't deployed: unpublished sections' CSS and JS, drafts' photos
     // Content-Security-Policy per page, as a <meta> (GitHub Pages sends no headers): hashes what each page has inline
     csp(),
   ],

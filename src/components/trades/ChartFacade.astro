@@ -1,9 +1,13 @@
 ---
 /**
  * Chart facade (design spec §4.21). The page ships no third-party code: the static chart (frontmatter `chart`)
- * or a quiet placeholder is shown, and TradingView's widget script is injected only when the visitor asks for
- * it, into a box of the same size, so nothing shifts. Without JavaScript, a plain link opens the symbol on
- * TradingView instead.
+ * or a quiet placeholder is shown, and TradingView's chart is loaded only when the visitor asks for it, into a box
+ * of the same size, so nothing shifts. Without JavaScript, a plain link opens the symbol on TradingView instead.
+ *
+ * No TradingView script ever runs in this page. Their embed script (which can't carry Subresource Integrity, as
+ * it changes without notice) would run with this origin's storage, where the CMS keeps its repository token and
+ * the contact card its decrypted copy. It only builds an iframe from its JSON settings, so the facade builds that
+ * iframe itself: the chart runs in TradingView's own origin, and the page needs nothing but frame-src.
  */
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
@@ -19,11 +23,9 @@ interface Props {
 }
 const { symbol, chart, chartAlt, id = 'chart' } = Astro.props;
 
-// What the click-to-load embed needs from the Content-Security-Policy, added only to pages this facade is on
-// (src/integrations/csp.ts): TradingView's script; the chart's iframe (the script falls back to s.tradingview.com
-// when its first host is blocked); and the <style> element it appends beside the iframe, whose text isn't stable
-// enough to hash, so on these pages <style> elements are allowed inline. Scripts stay hash-only.
-const CSP = "script-src https://s3.tradingview.com; frame-src https://www.tradingview-widget.com https://s.tradingview.com; style-src 'unsafe-inline'";
+// What the click-to-load chart needs from the Content-Security-Policy, added only to pages this facade is on
+// (src/integrations/csp.ts): the chart's frame. Nothing else: no script source and no 'unsafe-inline'.
+const CSP = 'frame-src https://www.tradingview-widget.com';
 ---
 
 <figure class="chart" data-chart data-symbol={symbol} data-csp={CSP} aria-labelledby={`${id}-cap`}>
@@ -44,7 +46,7 @@ const CSP = "script-src https://s3.tradingview.com; frame-src https://www.tradin
 
   <div class="chart__actions" data-requires-js>
     <button class="btn btn--sm chart__load" type="button" data-chart-load><span>Load interactive chart (TradingView)</span></button>
-    <p class="chart__note" data-chart-note>Loads a third-party script.</p>
+    <p class="chart__note" data-chart-note>Loads from TradingView, a third party.</p>
   </div>
   <p class="chart__status" data-chart-status aria-live="polite"></p>
   <a class="ext-link chart__out" href={tradingViewUrl(symbol)} rel="noopener">Open {symbol} on TradingView<Icon name="arrow-up-right" /></a>
@@ -67,6 +69,7 @@ const CSP = "script-src https://s3.tradingview.com; frame-src https://www.tradin
   .chart__stage:focus { outline: none; }
   .chart__stage:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
   .chart__stage[data-loaded] { background: none; }
+  .chart__stage :global(.chart__frame) { display: block; width: 100%; height: 100%; border: 0; }
   .chart__img { width: 100%; height: 100%; object-fit: contain; background: var(--bg-raised); }
   .chart__ph {
     position: absolute; inset: 0;
@@ -92,47 +95,39 @@ const CSP = "script-src https://s3.tradingview.com; frame-src https://www.tradin
 
 <script>
   /*
-   * Click-to-load TradingView: the embed script reads its JSON config from its own text. Nothing third-party is
-   * requested before the click. A theme change while the chart is open re-renders it in the new theme.
+   * Click-to-load TradingView: the advanced-chart widget's own iframe, built here with the settings its embed
+   * script would put in the URL fragment. Nothing third-party is requested before the click. A theme change while
+   * the chart is open re-renders it.
    */
-  const SRC = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+  const FRAME = 'https://www.tradingview-widget.com/embed-widget/advanced-chart/?locale=en';
 
   function mount(figure: HTMLElement, stage: HTMLElement, status: HTMLElement | null): void {
-    const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
-    // The widget fills the facade's box exactly (autosize), so loading it moves nothing.
-    const host = document.createElement('div');
-    host.className = 'tradingview-widget-container';
-    host.style.cssText = 'width:100%;height:100%';
-    const widget = document.createElement('div');
-    widget.className = 'tradingview-widget-container__widget';
-    widget.style.cssText = 'width:100%;height:100%';
-    const script = document.createElement('script');
-    script.src = SRC;
-    script.async = true;
-    script.textContent = JSON.stringify({
+    const symbol = figure.dataset.symbol ?? '';
+    const settings = {
       autosize: true,
-      symbol: figure.dataset.symbol,
+      symbol,
       interval: 'D',
       timezone: 'Asia/Singapore',
-      theme,
+      theme: document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
       style: '1',
-      locale: 'en',
       backgroundColor: getComputedStyle(figure).backgroundColor,
       allow_symbol_change: false,
       hide_side_toolbar: true,
       save_image: false,
       calendar: false,
       support_host: 'https://www.tradingview.com',
-    });
-    script.addEventListener('load', () => {
+    };
+    // The frame fills the facade's box exactly (.chart__frame), so loading it moves nothing.
+    const frame = document.createElement('iframe');
+    frame.className = 'chart__frame';
+    frame.title = `Interactive chart of ${symbol} (TradingView)`;
+    frame.referrerPolicy = 'strict-origin-when-cross-origin';
+    frame.setAttribute('scrolling', 'no');
+    frame.src = `${FRAME}#${encodeURIComponent(JSON.stringify(settings))}`;
+    frame.addEventListener('load', () => {
       if (status) status.textContent = 'Interactive chart loaded. Chart by TradingView.';
     });
-    script.addEventListener('error', () => {
-      delete stage.dataset.loaded;
-      if (status) status.textContent = 'The chart could not be loaded. Use the TradingView link below instead.';
-    });
-    host.append(widget, script);
-    stage.replaceChildren(host);
+    stage.replaceChildren(frame);
     stage.dataset.loaded = '';
   }
 

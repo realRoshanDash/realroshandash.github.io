@@ -3,10 +3,11 @@
  * UI-agnostic. Typical wiring:
  *
  *   import sealedJson from '../../data/contact.sealed.json';
- *   import { parseSealed } from '../../lib/contact/seal.ts';
- *   import { solve, readCachedContact, writeCachedContact } from './solver.ts';
+ *   import { parseSealed } from '../../lib/contact/card.ts';
+ *   import { readCachedContact, writeCachedContact } from './cache.ts';
  *
  *   const sealed = parseSealed(sealedJson);
+ *   const { solve } = await import('./solver.ts'); // the kernel and the cipher load on first use
  *   const contact = readCachedContact(sealed) ?? (await solve(sealed, { onProgress, signal })).contact;
  *   writeCachedContact(sealed, contact);
  *
@@ -23,9 +24,11 @@ import {
   requireWebCrypto,
   unsealContact,
   type Contact,
-  type SealedContact,
 } from '../../lib/contact/seal.ts';
 import type { PowRequest, PowResponse } from './pow.worker.ts';
+
+// The tab-session cache lives in its own module, so a page can read it without loading the solver.
+export { clearCachedContact, readCachedContact, writeCachedContact } from './cache.ts';
 
 export interface SolveProgress {
   /** Nonces tested so far. Approximate while workers run, since each reports every ~50 ms. */
@@ -252,46 +255,4 @@ async function searchOnMainThread(search: Search): Promise<{ nonce: number; hash
     if (signal?.aborted) throw abortReason(signal);
   }
   throw notFound();
-}
-
-// ---------------------------------------------------------------------------------------------
-// Tab-session cache: once solved, the card stays revealed until the tab closes. Keys include
-// part of `check`, so re-sealing the card invalidates old entries. Storage failures (private
-// mode, quota, disabled storage) degrade to "not cached".
-// ---------------------------------------------------------------------------------------------
-
-const cacheKey = (sealed: SealedContact) => `contact-card:v${sealed.v}:${sealed.check.slice(0, 16)}`;
-
-const storage = (): Storage | null => {
-  try {
-    return typeof sessionStorage === 'undefined' ? null : sessionStorage;
-  } catch {
-    return null; // access itself can throw when storage is blocked
-  }
-};
-
-/** The card solved earlier in this tab, or null. The value is re-validated, never trusted. */
-export function readCachedContact(sealed: SealedContact): Contact | null {
-  try {
-    const raw = storage()?.getItem(cacheKey(sealed));
-    return raw ? parseContact(JSON.parse(raw)) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function writeCachedContact(sealed: SealedContact, contact: Contact): void {
-  try {
-    storage()?.setItem(cacheKey(sealed), JSON.stringify(parseContact(contact)));
-  } catch {
-    // not cached; the visitor solves again next time
-  }
-}
-
-export function clearCachedContact(sealed: SealedContact): void {
-  try {
-    storage()?.removeItem(cacheKey(sealed));
-  } catch {
-    // nothing to clear
-  }
 }

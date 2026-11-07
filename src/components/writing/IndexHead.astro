@@ -1,7 +1,9 @@
 ---
 /**
  * Head of a writing index (design spec §5.2, §5.4): the real route in mono, an optional eyebrow, the page title in
- * .t-page (cols 1–8) and an aside with the description and the RSS link (cols 9–12).
+ * .t-page (cols 1–8) and an aside with the description, the RSS link at its end (cols 9–12; on its own line on
+ * phones). Its metrics are PageHead's (About, Contact): the same top padding, route-to-title gap, one lede-sized
+ * paragraph on the title's baseline, so the title stays put as you move between the three pages in the nav.
  *
  * The title is fitted to its column in pure CSS: --len is the longest word in characters, so a long tag name
  * ("Distributed systems") steps down from --fs-page instead of overflowing. Nothing is measured at runtime.
@@ -24,24 +26,28 @@ const { route, title, eyebrow, desc, rss } = Astro.props;
 
 <header class="index-head">
   <div class="wrap">
-    <p class="index-head__route mono">{route}</p>
     <div class="g index-head__grid">
+      <p class="index-head__route mono">{route}</p>
       <div class="index-head__title" style={`--len:${longestWord(title)}`}>
         {eyebrow && <p class="label index-head__eyebrow">{eyebrow}</p>}
         <h1 class="t-page" style={lsbStyle(title)}>{title}</h1>
       </div>
-      <div class="index-head__aside">
-        {desc && <p class="index-head__desc">{desc}</p>}
-        <p><a class="arrow-link" href={rss}>RSS feed<Icon name="rss" /></a></p>
-      </div>
+      <p class="index-head__aside">
+        {desc && <>{desc}{' '}</>}<a class="arrow-link index-head__rss" href={rss}>RSS feed<Icon name="rss" /></a>
+      </p>
     </div>
   </div>
 </header>
 
 <style>
-  .index-head { padding-top: clamp(28px, 4vw, 56px); }
-  .index-head__route { color: var(--fg-3); margin-bottom: clamp(20px, 2.6vw, 36px); }
-  .index-head__grid { align-items: end; row-gap: 24px; }
+  .index-head { padding-top: clamp(32px, 4.4vw, 72px); }
+  /* the aside's last line sits on the title's baseline, however the two wrap */
+  .index-head__grid {
+    align-items: end;             /* fallback where last-baseline alignment isn't supported */
+    align-items: last baseline;
+    row-gap: 20px;
+  }
+  .index-head__route { grid-column: 1 / -1; color: var(--fg-3); }
   .index-head__title { grid-column: 1 / 9; container-type: inline-size; }
   .index-head__eyebrow { margin-bottom: 14px; }
   /* Fit: never wider than the column. 0.6em is a safe advance per character for Inter 700 at -0.05em. */
@@ -49,11 +55,21 @@ const { route, title, eyebrow, desc, rss } = Astro.props;
     font-size: min(var(--fs-page), calc(100cqi / (var(--len, 7) * 0.6)));
     overflow-wrap: break-word;
   }
-  .index-head__aside { grid-column: 9 / 13; display: grid; gap: 16px; justify-items: start; padding-bottom: 8px; }
-  .index-head__desc { max-width: 30em; font-size: 15px; line-height: 1.5; color: var(--fg-2); }
+  .index-head__aside {
+    grid-column: 9 / 13;
+    max-width: 24em;
+    font-size: var(--fs-lede); line-height: var(--lh-lede); letter-spacing: var(--tr-snug);
+    color: var(--fg-2);
+  }
+  .index-head__rss { margin-left: 0.1em; }
 
   @media (width < 1024px) {
     .index-head__title { grid-column: 1 / -1; }
-    .index-head__aside { grid-column: 1 / -1; padding-bottom: 0; }
+    .index-head__aside { grid-column: 3 / -1; }
+  }
+  @media (width < 640px) {
+    .index-head__grid { row-gap: 16px; }
+    .index-head__aside { grid-column: 1 / -1; }
+    .index-head__rss { display: flex; width: max-content; margin: 16px 0 0; }
   }
 </style>

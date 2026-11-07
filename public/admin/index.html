@@ -2,6 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!-- This page holds the repository token (local storage), so it gets its own Content-Security-Policy (the site's
+         per-page policies don't cover public/). Scripts: only the exact unpkg versions Sveltia CMS 0.261.0 imports
+         at runtime: its own chunks, Shiki for code fields, Turndown for the rich-text mode, exifr, jsquash's WebP
+         encoder and the HEIC decoder for image uploads (WebAssembly, in a blob: worker), SVGO, PDF.js, Day.js,
+         Immutable. No inline script, no eval. Styles: Svelte inserts its own <style> elements. When upgrading
+         Sveltia, re-check this list (README.md → Publishing → A). -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'wasm-unsafe-eval' https://unpkg.com/@sveltia/cms@0.261.0/ https://unpkg.com/@sveltia/ui@0.89.1/ https://unpkg.com/@shikijs/langs@4.6.0/ https://unpkg.com/@shikijs/themes@4.6.0/ https://unpkg.com/turndown@7.2.5/ https://unpkg.com/exifr@7.1.3/ https://unpkg.com/@jsquash/webp@1.5.0/ https://unpkg.com/wasm-feature-detect@%5E1.2.11 https://unpkg.com/@discourse/heic@1.0.0/ https://unpkg.com/svgo@4.1.0/ https://unpkg.com/pdfjs-dist@6.5.438/ https://unpkg.com/dayjs@1.11.23/ https://unpkg.com/immutable@5.1.9/; style-src 'self' 'unsafe-inline'; font-src https://cdn.jsdelivr.net/fontsource/; img-src 'self' data: blob: https://*.githubusercontent.com; media-src 'self' blob:; connect-src 'self' blob: data: https://api.github.com https://www.githubstatus.com https://unpkg.com; worker-src blob:; frame-src blob:; manifest-src blob:; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <title>Content manager · Roshan Dash</title>
@@ -10,9 +20,10 @@
   </head>
   <body>
     <noscript>The content manager needs JavaScript.</noscript>
-    <!-- Sveltia CMS (https://sveltiacms.app), pinned to one exact version. The integrity hash makes the
-         browser refuse the script if unpkg ever serves different bytes. To upgrade, see README.md →
-         Publishing → A. A classic script, not type="module", as the Sveltia docs require. -->
+    <!-- Sveltia CMS (https://sveltiacms.app), pinned to one exact version. The integrity hash covers this entry file
+         only: the browser refuses it if unpkg ever serves different bytes. The chunks and libraries it imports later
+         carry no hash (Sveltia builds those URLs itself); the policy above limits them to the same pinned versions.
+         To upgrade, see README.md → Publishing → A. A classic script, not type="module", as the Sveltia docs require. -->
     <script
       src="https://unpkg.com/@sveltia/cms@0.261.0/dist/sveltia-cms.js"
       integrity="sha384-sty7BGmg7YGd6Wi3G73SvUYWcNE6vztGSEklT7ZI8T/3JSshWKHKH7HuUk99s/HJ"

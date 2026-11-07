@@ -18,17 +18,19 @@ const { item, as: Heading = 'h3', reveal, morph = true } = Astro.props;
 ---
 
 <li class="post-row" data-reveal={reveal}>
+  {/* The spaces render nothing (the parts are grid or flex items), but the text that search, the palette and
+      screen readers get reads "2021-11-15 3 min read" and "Apple Watch From the archive", not "…153 min". */}
   <p class="post-row__meta label">
-    <span class="no">No. {item.no === undefined ? <span aria-hidden="true">{item.noLabel}</span> : item.noLabel}</span>
-    <time datetime={item.iso}>{item.iso}</time>
+    <span class="no">No. {item.no === undefined ? <span aria-hidden="true">{item.noLabel}</span> : item.noLabel}</span>{' '}
+    <time datetime={item.iso}>{item.iso}</time>{' '}
     <span class="min">{item.minutes} min<span class="sr-only"> read</span></span>
   </p>
   <Heading class="post-row__title t-h3">
     <a href={item.href} style={morph ? `view-transition-name: ${item.vt}` : undefined}>{item.title}</a>
     {(item.archived || item.draft) && (
       <span class="post-row__badges">
-        {item.archived && <span class="badge badge--plain">From the archive</span>}
-        {item.draft && <span class="badge"><span class="badge__hatch" aria-hidden="true"></span>Draft</span>}
+        {item.archived && <>{' '}<span class="badge badge--plain">From the archive</span></>}
+        {item.draft && <>{' '}<span class="badge"><span class="badge__hatch" aria-hidden="true"></span>Draft</span></>}
       </span>
     )}
   </Heading>

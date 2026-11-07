@@ -33,7 +33,8 @@ import { PORTRAIT_ALT, SITE } from '@/data/site';
 </figure>
 
 <style>
-  .plate { display: grid; gap: 12px; }
+  /* the caption starts 32px below the print, clear of the crop marks (they reach 24px out), as on the hero plate */
+  .plate { display: grid; gap: 32px; }
   .plate__mount { position: relative; --crop-off: 24px; }
   .plate__print { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--plate); }
   .plate__print :global(.plate__img) { width: 100%; height: 100%; object-fit: cover; }
@@ -63,9 +64,11 @@ import { PORTRAIT_ALT, SITE } from '@/data/site';
   @media (640px <= width < 1024px) {
     .plate__mount { --crop-off: min(24px, calc(var(--margin) - 4px)); }
   }
-  /* phone: cols 2–4 of the 4-column grid; the caption runs up the left edge in col 1 (as on the hero plate) */
+  /* phone: cols 2–4 of the 4-column grid; the caption runs up the left edge in col 1, and the crop marks go,
+     as on the hero plate (the bottom-left one would butt against the end of the caption) */
   @media (width < 640px) {
     .plate { position: relative; }
+    .crop { display: none; }
     .plate__cap {
       position: absolute; right: calc(100% + 10px); bottom: 0;
       writing-mode: vertical-rl; transform: rotate(180deg);

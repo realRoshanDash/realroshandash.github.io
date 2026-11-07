@@ -6,6 +6,7 @@ import SiteFooter from '@/components/layout/SiteFooter.astro';
 import GridOverlay from '@/components/layout/GridOverlay.astro';
 import CommandPalette from '@/components/palette/CommandPalette.astro';
 import { ogImageFor } from '@/lib/og';
+import { WRITING_FEED, WRITING_FEED_TITLE } from '@/components/writing/posts';
 import '@/styles/global.css';
 
 interface Props {
@@ -62,7 +63,7 @@ const ogImageType = /\.jpe?g$/i.test(card.src) ? 'image/jpeg' : /\.webp$/i.test(
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <link rel="alternate" type="application/rss+xml" title={SITE.name} href="/rss.xml" />
+    <link rel="alternate" type="application/rss+xml" title={WRITING_FEED_TITLE} href={WRITING_FEED} />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <meta property="og:type" content={type} />
     <meta property="og:site_name" content={SITE.name} />
@@ -85,7 +86,9 @@ const ogImageType = /\.jpe?g$/i.test(card.src) ? 'image/jpeg' : /\.webp$/i.test(
     <Font cssVariable="--font-mono" />
     <slot name="head" />
   </head>
-  <body>
+  <!-- id="top": the footer's "Back to top" lands on the document itself. On the sticky header, which already
+       counts as in view, the browser would only scroll by the header's offset. -->
+  <body id="top">
     <a class="skip" href="#main">Skip to content</a>
     <GridOverlay />
     <SiteHeader progress={progress} />

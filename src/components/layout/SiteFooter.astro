@@ -78,8 +78,10 @@ const nav = await getNav('footer');
   .site-footer__colophon { grid-column: 9 / 11; }
   .site-footer__colophon p { color: var(--fg-2); }
   .site-footer__time { grid-column: 11 / 13; }
-  .site-footer__clock { display: flex; justify-content: space-between; gap: 12px; width: 100%; color: var(--fg-2); }
-  .clock { display: inline-block; min-inline-size: 9ch; text-align: right; color: var(--fg); font-weight: 550; font-variant-numeric: tabular-nums; }
+  /* The time is HH:MM in tabular digits, exactly 5ch (9ch pushed it past the content edge from 1024 to ~1100px).
+     Without JS it keeps reading UTC+08:00, which wraps under the city rather than overflowing. */
+  .site-footer__clock { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 12px; width: 100%; color: var(--fg-2); }
+  .clock { display: inline-block; min-inline-size: 5ch; text-align: right; color: var(--fg); font-weight: 550; font-variant-numeric: tabular-nums; }
 
   /* "Roshan Dash" is 5.418em of ink; -0.0543em puts the ink of R on the column line */
   .site-footer__mark {

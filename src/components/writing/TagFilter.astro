@@ -73,15 +73,26 @@ const plural = (n: number, word: string) => (n === 1 ? ` ${word}` : ` ${word}s`)
     .tag-filter__list li { flex: none; scroll-snap-align: start; }
     .tag-filter__list li:last-child { padding-right: 24px; }
   }
+  /* Forced colours: the current chip's fill becomes Canvas, so it is underlined instead */
+  @media (forced-colors: active) {
+    .chip[aria-current='page'] { text-decoration: underline 2px; text-underline-offset: 4px; }
+  }
 </style>
 
 <script>
   /*
    * On a phone the row scrolls sideways in count order, so the current tag can start out past the right-edge
    * fade. When it does, the row starts at the current chip instead, on the page gutter where "All" would sit.
-   * Without JS the row simply starts at "All".
+   * Without JS the row simply starts at "All". Tabbing along the row brings each chip fully into view (focus
+   * alone leaves a chip that is mostly off-screen or under the fade). Keyboard focus only: a tap or click focuses
+   * the chip too, and scrolling it away under the pointer could swallow the click.
    */
   for (const list of document.querySelectorAll<HTMLElement>('[data-tag-filter]')) {
+    list.addEventListener('focusin', (event) => {
+      const target = event.target as HTMLElement;
+      if (list.scrollWidth <= list.clientWidth || !target.matches(':focus-visible')) return;
+      target.closest('li')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    });
     const item = list.querySelector<HTMLElement>('[aria-current="page"]')?.parentElement;
     if (!item || list.scrollWidth <= list.clientWidth) continue;
     if (item.offsetLeft + item.offsetWidth > list.clientWidth - 24) {

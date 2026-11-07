@@ -52,10 +52,14 @@ The token is kept in that browser's local storage, so sign out on shared compute
 uploaded to an entry are saved in the entry's folder. JPEG and HEIC uploads are converted to
 WebP (2400 px max); PNGs are kept as they are. Works from a phone too.
 
-**Updating the CMS.** `public/admin/index.html` loads one exact Sveltia CMS version from unpkg,
-with a Subresource Integrity hash, so browsers refuse the script if unpkg ever serves different
-bytes. To upgrade ([release notes](https://github.com/sveltia/sveltia-cms/releases)), put the new
-version in the `src` URL and the new file's hash in `integrity`:
+**Updating the CMS.** `public/admin/index.html` loads one exact Sveltia CMS version from unpkg.
+Its Subresource Integrity hash covers that entry file only: browsers refuse it if unpkg ever
+serves different bytes. The chunks and libraries Sveltia imports later (its own chunks, Shiki for
+code, Turndown for rich text, exifr and the WebP and HEIC codecs for uploads, …) carry no hash,
+because Sveltia builds those URLs itself. The page's Content-Security-Policy limits scripts to
+those exact package versions on unpkg; it can't check their bytes. To upgrade
+([release notes](https://github.com/sveltia/sveltia-cms/releases)), put the new version in the
+`src` URL and the new file's hash in `integrity`:
 
 ```sh
 v=$(npm view @sveltia/cms version)   # the latest version, e.g. 0.261.0
@@ -63,9 +67,11 @@ curl -fsSL "https://unpkg.com/@sveltia/cms@$v/dist/sveltia-cms.js" | openssl dgs
 # → integrity="sha384-<that output>"
 ```
 
-Then run `npm run build && npm run preview` and check that `/admin/` still shows the sign-in
-screen. A hash that doesn't match leaves the page blank, with an integrity error in the browser
-console.
+Then update the versions in the policy's `script-src` (the comment above it lists what each one is
+for), run `npm run build && npm run preview`, and check `/admin/` with the browser console open:
+sign in, open an entry, switch a body field to rich text and upload a JPEG. A hash that doesn't
+match leaves the page blank with an integrity error; a "Refused to load the script" message names
+a URL the policy is missing.
 
 ### B. Scaffold from the terminal
 
@@ -218,7 +224,14 @@ git add src/data/contact.sealed.json && git commit -m "contact: update card" && 
   Rerun a deploy from the Actions tab if needed.
 - **DNS** (Cloudflare): `roshandash.com` and `www` are CNAMEs to `roshandash411.github.io`.
   Leave the MX/TXT records alone — they carry email.
-- **Old URLs** from the 2021 site redirect via small static pages in `public/blog/`.
+- **Old URLs** from the 2021 site redirect via small static pages in `public/blog/` (a canonical
+  link and an instant refresh, no `noindex`). They point at `/blog/`; when a restored post is
+  published, point its stub's canonical and refresh at the post instead.
+- **Certificates.** GitHub Pages issues one certificate for the custom domain, and covers `www`
+  only if the `www` CNAME existed when the domain was added. If `https://www.roshandash.com`
+  shows a certificate error, remove and re-add the custom domain under *Settings → Pages*, then
+  check with `openssl s_client -connect www.roshandash.com:443 -servername www.roshandash.com`
+  that `www` is in the certificate's names.
 
 `public/.well-known/security.txt` expires after a year. CI starts warning 30 days before
 the date, so move `Expires` ahead when that happens.
@@ -232,14 +245,32 @@ hashes can't go stale. The rest is fixed: `default-src 'self'`, `script-src 'sel
 'wasm-unsafe-eval'` (Pagefind), `img-src 'self' data:`, `font-src`/`connect-src`/`worker-src
 'self'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self' mailto:`. A component that
 needs more declares it with a `data-csp` attribute, which only widens the pages it is on (the
-dormant trade pages' click-to-load chart). Files in `public/` (the CMS, old-URL redirects) are
-left alone. `npm run dev` has no policy; check changes with `npm run build && npm run preview`.
-A meta tag can't set `frame-ancestors` or reporting, so those need a host that sends headers.
+dormant trade pages' click-to-load chart adds `frame-src` for TradingView's frame, and nothing
+else). The pass also fails the build when a page's markup loads something its policy would block
+(a remote image or an embedded video in a post), which the browser would otherwise drop without
+a word: keep files in the repo, next to the post. Files in `public/` are left alone; the CMS page
+carries its own policy. `npm run dev` has no policy; check changes with `npm run build && npm run
+preview`.
 
-**Content guard.** `npm run build` ends with `scripts/content-guard.mjs`, which scans every text
-file in `dist/` and `public/` (HTML, feeds, YAML, JSON, JS…) and fails the build on trading or
-market words, the private project, a plaintext address on the domain, or a `mailto:` link in markup.
-Run it alone with `npm run guard`. To publish something it blocks, change its rules in the same commit.
+**What a static host can't send.** GitHub Pages sends no custom headers, and a meta tag can't set
+`frame-ancestors` or reporting. So there is no HSTS (a first visit typed as `http://` gets a
+redirect that a network attacker could strip), no `frame-ancestors`/`X-Frame-Options` (any page,
+`/contact/` included, can be framed by another site) and no `X-Content-Type-Options`. That is an
+accepted risk for a static site with no forms; its one sign-in is the CMS, so open it from a
+bookmark of `https://roshandash.com/admin/`, never by typing the address. To close it, proxy the apex and
+`www` through Cloudflare (SSL mode *Full (strict)*), turn on HSTS there (add `includeSubDomains`
+only if every subdomain is HTTPS-only), and add a response-header rule setting
+`Content-Security-Policy: frame-ancestors 'none'`, `X-Content-Type-Options: nosniff` and
+`Referrer-Policy: strict-origin-when-cross-origin`.
+
+**Content guard.** `npm run build` ends with `scripts/content-guard.mjs`, which scans every file in
+`dist/` and `public/` and fails the build on trading or market words, the private project, health
+details, an address on the domain (however its `@` is encoded), a `mailto:` link in markup, any of
+the contact card's own values, or a photo with GPS data in its EXIF. To find those values it opens
+the sealed card the way a visitor's browser does (about a second), then looks for them in every
+file, text or binary, and inside gzipped files (the search index); it never prints them. Committed
+photos under `src/` are checked for GPS data too. Run it alone with `npm run guard`. To publish
+something it blocks, change its rules in the same commit.
 
 ## Repository layout
 
@@ -249,7 +280,7 @@ src/content.config.ts   schemas for the collections
 src/data/site.ts        name, URL, socials, navigation
 src/pages/              routes (including robots.txt.ts and the RSS feeds)
 public/                 copied as-is: admin/ (CMS), .well-known/, old-URL redirects
-src/integrations/       build steps: csp.ts (per-page Content-Security-Policy), prune-unused-css.ts
+src/integrations/       build steps: csp.ts (per-page Content-Security-Policy), prune-unused-assets.ts
 scripts/                new-entry.mjs (scaffolds), seal-contact.mjs (contact card), content-guard.mjs
 ```
 

@@ -141,6 +141,42 @@ export function highlight(text: string, ranges: readonly Range[]): { text: strin
   return out;
 }
 
+/* ---------------------------------------------------------------- excerpts */
+
+export interface Segment {
+  text: string;
+  /** a match, shown in <mark> */
+  mark: boolean;
+}
+
+/** Punctuation an excerpt can't sensibly start with: dashes, separators, closing marks. Opening quotes stay. */
+const LEADING = /^[\s\-\u2010-\u2015\u00b7\u2022\u2219,.;:!?)\]}\u201d\u2019\u00bb/|]+/u;
+
+/**
+ * A Pagefind excerpt made fit for a row: leading dashes and punctuation trimmed, and "…" in front unless it starts
+ * the page's text or a sentence there (Pagefind ends each heading and block with a full stop). `content` is the
+ * page's plain text from the index; without it the excerpt is assumed to start mid-text.
+ */
+export function tidyExcerpt(segments: readonly Segment[], content = ''): Segment[] {
+  const out = segments.map((segment) => ({ ...segment })).filter((segment) => segment.text !== '');
+  while (out.length && !out[0].mark) {
+    out[0].text = out[0].text.replace(LEADING, '');
+    if (out[0].text) break;
+    out.shift();
+  }
+  if (!out.length) return out;
+  const words = (text: string) => text.replace(/\s+/g, ' ').trim();
+  const plain = words(out.map((segment) => segment.text).join(''));
+  const text = words(content);
+  const at = plain ? text.indexOf(plain.slice(0, 40)) : -1;
+  const starts = at === 0 || (at > 0 && /[.!?:]$/.test(text.slice(0, at).trimEnd()));
+  if (!starts) {
+    if (out[0].mark) out.unshift({ text: '…', mark: false });
+    else out[0].text = `…${out[0].text}`;
+  }
+  return out;
+}
+
 /* ---------------------------------------------------------------- copy */
 
 const count = new Intl.NumberFormat('en-SG');
@@ -166,6 +202,12 @@ export function displayRoute(url: string, origin = 'https://roshandash.com'): st
   if (parsed.origin !== new URL(origin).origin) return `${parsed.host.replace(/^www\./, '')}${path === '/' ? '' : path}`;
   return `${path}${parsed.hash}`;
 }
+
+/**
+ * Where a route may wrap: after a "/" that follows something (never the leading one), so in a narrow column
+ * "linkedin.com/in/roshan-dash" breaks into readable pieces instead of being cut off.
+ */
+export const routeParts = (route: string): string[] => route.split(/(?<=.\/)(?=.)/);
 
 /** ⌘ vs Ctrl in key hints. Chromium's userAgentData says "macOS"; navigator.platform says "MacIntel". */
 export const isApplePlatform = (platform: string): boolean => /mac|iphone|ipad|ipod/i.test(platform);

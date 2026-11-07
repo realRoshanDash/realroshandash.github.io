@@ -131,12 +131,16 @@ const PHONE = '(max-width: 639px)';
   .hero__meta dd { font-size: 15px; line-height: 20px; font-weight: 500; letter-spacing: -0.012em; }
   .clock { display: inline-block; min-inline-size: 9ch; font-variant-numeric: tabular-nums; }
 
+  /* The name may wrap, so it can never slide under the portrait: with the WCAG 1.4.12 text-spacing overrides
+     "Roshan" no longer fits cols 1–8 and breaks instead of running behind the cut-out (spec §2.3.3). The
+     -0.04em right margin is the slack that keeps it on one line at normal spacing: its box (side bearings and
+     the last letter's tracking included) is a hair wider than the 3.0943em of ink that F is fitted to. */
   .hero__name {
     grid-column: 1 / 9; grid-row: 3;
     position: relative; z-index: var(--z-plate-type);
-    margin: var(--gap-name) 0 0 -0.0543em;   /* optical alignment: the ink of R / D on the column line */
+    margin: var(--gap-name) -0.04em 0 -0.0543em;   /* optical alignment: the ink of R / D on the column line */
     font-size: var(--F); line-height: 0.84; font-weight: 700; letter-spacing: -0.05em;
-    white-space: nowrap;
+    white-space: normal; overflow-wrap: anywhere;
     font-variation-settings: 'opsz' 32;
   }
   .hero__name .line { display: block; }
@@ -210,7 +214,9 @@ const PHONE = '(max-width: 639px)';
       grid-template-columns: repeat(2, minmax(calc((100% - 6 * var(--gutter)) / 7 * 2 + var(--gutter)), max-content));
     }
   }
-  @media (width >= 1024px) and (height < 820px) { .hero__ruler { display: none; } }
+  /* Below 900px tall F is height-bound, and the ~40px ruler would push both CTAs past the fold (spec §4.11): it goes.
+     F reads only 100svh, so the dash stays on the shoulder line. */
+  @media (width >= 1024px) and (height < 900px) { .hero__ruler { display: none; } }
   /* 1366×768 laptops with browser chrome (≈657px tall): the meta row repeats the lede, so it goes too and F gets the room */
   @media (width >= 1024px) and (height < 720px) {
     .hero__meta { display: none; }
@@ -234,8 +240,6 @@ const PHONE = '(max-width: 639px)';
   @media (width < 640px) {
     .hero { --gap-name: 20px; }
     .hero__grid { --F: min(26.6vw, 112px); }
-    /* a word too wide for the line (user text-spacing overrides) breaks instead of being clipped */
-    .hero__name { white-space: normal; overflow-wrap: anywhere; }
     .hero__ruler { display: none; }
     .hero__meta { margin-top: 0; }
     .hero__meta > div { grid-column: span 2; }

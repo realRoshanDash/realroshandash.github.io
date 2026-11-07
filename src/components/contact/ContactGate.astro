@@ -54,7 +54,7 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
   <dl class="channels" data-fields>
     <div class="channel channel--email" data-email-row>
       <dt class="label">Email</dt>{' '}
-      <dd class="channel__value" data-email-value><span aria-hidden="true">••••••••@roshandash.com</span><span class="sr-only">Hidden until you verify</span></dd>
+      <dd class="channel__value" data-email-value><span aria-hidden="true">••••••••@<wbr />roshandash.com</span><span class="sr-only">Hidden until you verify</span></dd>
       <dd class="channel__act">
         <button type="button" class="chip-btn" disabled data-locked><Icon name="lock" />Locked</button>
         <button type="button" class="chip-btn" hidden data-copy><Icon name="copy" /><span data-copy-label>Copy</span></button>
@@ -138,7 +138,9 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
   .gate__stats dd { font-size: 15px; font-weight: 550; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .contact-card[data-cached] .gate__stats { display: none; }
 
-  /* wraps rather than truncates: the verified line ends with the timing, the number it exists to show */
+  /* wraps rather than truncates: the verified line ends with the timing, the number it exists to show. Its pieces
+     (key = sha256(…), AES-256-GCM ok · 0.31 s) are nowrap, so it breaks only at the arrows; overflow-wrap stays
+     as the last resort for a piece wider than the box (320px screens). */
   .gate__readout {
     padding: 10px 16px 12px;
     border-top: 1px solid var(--rule);
@@ -146,6 +148,7 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
     color: var(--fg-3);
     overflow-wrap: anywhere;
   }
+  .gate__readout :global(.nw) { white-space: nowrap; }
   .gate__readout :global(b) { font-weight: 400; color: var(--signal-text); }
   .gate__readout :global(.icon--inline) { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; }
 
@@ -158,7 +161,9 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
     min-height: 64px; padding: 14px 0;
     border-top: 1px solid var(--rule);
   }
-  .channels :global(.channel__value) { min-width: 0; font-size: 18px; font-weight: 550; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+  /* An address too long for its cell breaks at the <wbr> after "@" (in the mask and in the revealed link), and
+     inside a word only if a part alone is still too long. */
+  .channels :global(.channel__value) { min-width: 0; font-size: 18px; font-weight: 550; letter-spacing: -0.02em; overflow-wrap: break-word; }
   .channels :global(.channel__value a:hover) { color: var(--signal-text); }
   .channel__act { display: flex; gap: 8px; align-items: center; align-self: center; }
   .channels__note { font-size: 14px; color: var(--fg-2); }
@@ -167,6 +172,13 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
   @media (width >= 1024px) {
     .channel,
     .channels :global(.channel) { grid-template-columns: calc((100% - 4 * var(--gutter)) / 5) minmax(0, 1fr) auto; }
+  }
+  /* Up to 1365px the email row's actions would squeeze the address into ~130–210px and break it mid-word, the
+     moment the gate pays off: they go under the value, as on phones. From 1366px the address fits beside them. */
+  @media (1024px <= width < 1366px) {
+    .channel,
+    .channels :global(.channel) { grid-template-columns: calc((100% - 4 * var(--gutter)) / 5) minmax(0, 1fr); row-gap: 10px; }
+    .channel__act { grid-column: 2 / -1; }
   }
   @media (640px <= width < 1024px) {
     .channel,
@@ -204,8 +216,19 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
 
 <script>
   import sealedJson from '@/data/contact.sealed.json';
-  import { parseSealed, ContactError, type Contact } from '@/lib/contact/seal.ts';
-  import { solve, readCachedContact, writeCachedContact, clearCachedContact, type SolveProgress } from '@/scripts/contact/solver.ts';
+  import { parseSealed, ContactError, type Contact } from '@/lib/contact/card.ts';
+  import { readCachedContact, writeCachedContact, clearCachedContact } from '@/scripts/contact/cache.ts';
+  import type { SolveProgress } from '@/scripts/contact/solver.ts';
+
+  // The solver, the cipher and the proof-of-work kernel are most of this island, and nobody needs them until they
+  // verify: they load once the gate comes near the screen or is pointed at, and at the latest on the click itself
+  // (spec §8.3: Home's initial JS stays within budget).
+  let solver: Promise<typeof import('@/scripts/contact/solver.ts')> | undefined;
+  const loadSolver = () =>
+    (solver ??= import('@/scripts/contact/solver.ts').catch((error: unknown) => {
+      solver = undefined; // try again next time
+      throw error;
+    }));
 
   const LABELS: Record<string, string> = { email: 'Email', phone: 'Phone', telegram: 'Telegram', whatsapp: 'WhatsApp', signal: 'Signal', calendar: 'Book a call', note: 'Note' };
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -238,9 +261,27 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
     }
   }
 
+  /**
+   * Writes an address into `el` with a <wbr> after the "@", so a forced break lands there ("…@" / "domain") and
+   * never inside the domain. Returns a setter for the text, which keeps that structure (the reveal animates it).
+   */
+  function addressText(el: HTMLElement, text: string): (shown: string) => void {
+    const at = text.indexOf('@') + 1;
+    const head = document.createTextNode('');
+    const tail = document.createTextNode('');
+    el.replaceChildren(head, ...(at > 0 ? [document.createElement('wbr'), tail] : []));
+    const set = (shown: string) => {
+      head.data = at > 0 ? shown.slice(0, at) : shown;
+      tail.data = at > 0 ? shown.slice(at) : '';
+    };
+    set(text);
+    return set;
+  }
+
   // Decode-style reveal: random glyphs resolve left to right into the real text; "@" and "." stay put.
   function scramble(el: HTMLElement, text: string) {
-    if (reduceMotion) { el.textContent = text; return; }
+    const set = addressText(el, text);
+    if (reduceMotion) return;
     const glyphs = 'abcdefghijklmnopqrstuvwxyz0123456789';
     const start = performance.now();
     const dur = 650;
@@ -249,9 +290,10 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
       const n = Math.floor(p * text.length);
       let out = text.slice(0, n);
       for (let i = n; i < text.length; i++) out += text[i] === '@' || text[i] === '.' ? text[i] : glyphs[(Math.random() * glyphs.length) | 0];
-      el.textContent = out;
+      set(out);
       if (p < 1) requestAnimationFrame(frame);
     };
+    set(text.replace(/[^@.]/g, () => glyphs[(Math.random() * glyphs.length) | 0]));
     requestAnimationFrame(frame);
   }
 
@@ -321,7 +363,7 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
           emailValue.replaceChildren();
           const a = Object.assign(document.createElement('a'), { href: link ?? '#' });
           emailValue.append(a);
-          if (animate) scramble(a, value); else a.textContent = value;
+          if (animate) scramble(a, value); else addressText(a, value);
           continue;
         }
         const row = document.createElement('div');
@@ -399,6 +441,8 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
       setState('verifying', 'Verifying…', SUB.verifying);
       live.textContent = 'Verifying. This takes about a second.';
       try {
+        const { solve } = await loadSolver();
+        if (controller.signal.aborted) throw controller.signal.reason;
         const result = await solve(sealed, { onProgress: showProgress, signal: controller.signal });
         const wait = MIN_VERIFYING_MS - (performance.now() - began);
         if (wait > 0 && !reduceMotion) await new Promise((resolve) => setTimeout(resolve, wait));
@@ -406,9 +450,9 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
         cells.hashes.textContent = count.format(result.hashes);
         cells.time.textContent = seconds(result.ms);
         writeCachedContact(sealed, result.contact);
-        // when the line wraps, "AES-256-GCM ok · 0.31 s" moves as one piece, so the timing never sits alone
-        const outcome = `${sealed.alg} ok · ${seconds(result.ms)}`.replaceAll(' ', '&nbsp;');
-        stats.innerHTML = `n = <b>${count.format(result.nonce)}</b> ${ARROW} key = sha256(salt || 02 || n) ${ARROW} ${outcome}`;
+        // Lines break only at the arrows: the key derivation and "AES-256-GCM ok · 0.31 s" each move as one piece
+        // (the hyphen in AES-256 was a break point too), so the timing never sits alone.
+        stats.innerHTML = `n = <b>${count.format(result.nonce)}</b> ${ARROW} <span class="nw">key = sha256(salt || 02 || n)</span> ${ARROW} <span class="nw">${sealed.alg} ok · ${seconds(result.ms)}</span>`;
         setState('verified', 'Verified', SUB.verified);
         live.textContent = 'Verified. Email address revealed.';
         render(result.contact, true);
@@ -435,5 +479,18 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
 
     button.addEventListener('click', start);
     if (!cached && new URLSearchParams(location.search).get('verify') === '1') start();
+    else if (!cached) {
+      const warm = () => void loadSolver().catch(() => {}); // a failed load is tried again, and reported, on the click
+      gate.addEventListener('pointerenter', warm, { once: true });
+      gate.addEventListener('focusin', warm, { once: true });
+      if ('IntersectionObserver' in window) {
+        const near = new IntersectionObserver((entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          near.disconnect();
+          warm();
+        }, { rootMargin: '0px 0px 600px 0px' });
+        near.observe(gate);
+      }
+    }
   }
 </script>

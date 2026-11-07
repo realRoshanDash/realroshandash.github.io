@@ -109,6 +109,10 @@ const description = 'Personal notes on US-equity setups: entry, stop and targets
   .filter__chip .count { font-size: 12px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
   .filter__chip[aria-pressed='true'] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
   .filter__chip[aria-pressed='true'] .count { color: var(--bg); opacity: 0.7; }
+  /* Forced colours: the pressed chip's fill becomes Canvas, so it is underlined instead */
+  @media (forced-colors: active) {
+    .filter__chip[aria-pressed='true'] { text-decoration: underline 2px; text-underline-offset: 4px; }
+  }
 
   .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(32px, 3.5vw, 48px) var(--gutter); }
   .ideas__empty { padding: 20px 0 24px; border-top: 1px solid var(--rule); font-size: 16px; color: var(--fg-2); }
@@ -161,5 +165,13 @@ const description = 'Personal notes on US-equity setups: entry, stop and targets
     };
 
     for (const button of buttons) button.addEventListener('click', () => show(button.dataset.filter ?? 'all'));
+    // On phones the chips scroll sideways: bring the one that takes keyboard focus fully into view (not on a tap,
+    // where scrolling it away under the finger could swallow the click).
+    const filter = root.querySelector<HTMLElement>('.filter');
+    filter?.addEventListener('focusin', (event) => {
+      const target = event.target as HTMLElement;
+      if (filter.scrollWidth <= filter.clientWidth || !target.matches(':focus-visible')) return;
+      target.closest('.filter__chip')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    });
   }
 </script>

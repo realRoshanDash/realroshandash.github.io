@@ -39,7 +39,7 @@ for (const button of document.querySelectorAll('[data-open-palette]')) {
     const fromMenu = Boolean(menu?.contains(button));
     setMenu(false, false);
     // Nothing claimed the request (no palette on this page): don't leave focus on <body>.
-    if (!requestPalette('button') && fromMenu) menuButton?.focus();
+    if (!requestPalette('button') && fromMenu) menuButton?.focus({ preventScroll: true });
   });
 }
 addEventListener('keydown', (event) => {
@@ -80,9 +80,10 @@ function setMenu(open: boolean, restoreFocus = true): void {
         li.animate([{ transform: 'translateY(12px)' }, { transform: 'none' }], { duration: 240, delay: i * 30, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' }),
       );
     }
-    menu.querySelector<HTMLElement>('a')?.focus();
+    menu.querySelector<HTMLElement>('a')?.focus({ preventScroll: true });
   } else if (restoreFocus) {
-    menuButton.focus();
+    // The header is sticky, so the button is in view: never scroll the page (Esc used to jump it 430–600px)
+    menuButton.focus({ preventScroll: true });
   }
 }
 
