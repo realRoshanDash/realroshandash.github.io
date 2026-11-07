@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "alg": "AES-256-GCM",
+  "difficulty": 22,
+  "salt": "V4OoFiOiLz+ntzf9KzuUhA==",
+  "check": "0d0f52a15a073765e9c4f74ef27f695dc3b9c0655c23aa2a6502d8b8732929b0",
+  "iv": "Vo5Hq52ZBLPoMPt7",
+  "ct": "7hduf0KQmrhzjLhl4iPYNhfyZAxEBLvM5YN0rOcKPZ27gs6QXT4cSTPw6T+hH+ZuxQ==",
+  "createdAt": "2026-11-07T08:26:32.086Z"
+}
