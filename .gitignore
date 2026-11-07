@@ -1,0 +1,22 @@
+# build output
+dist/
+.astro/
+.netlify/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+
+# environment / secrets — never commit plaintext contact details
+.env
+.env.*
+!.env.example
+contact.local.json
+
+# editors / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
