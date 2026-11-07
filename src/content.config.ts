@@ -56,6 +56,8 @@ const trades = defineCollection({
         entry: z.number().positive(),
         stop: z.number().positive(),
         targets: z.array(z.number().positive()).min(1).max(5),
+        /** When the entry actually triggered (watching → active). Defaults to `published` for stats. */
+        triggered: z.coerce.date().optional(),
         /** Average exit price — required once the idea is closed or stopped. */
         exit: z.number().positive().optional(),
         closed: z.coerce.date().optional(),
