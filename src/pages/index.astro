@@ -12,31 +12,17 @@ import Stages from '@/components/home/Stages.astro';
 import AgentTranscript from '@/components/AgentTranscript.astro';
 import SectionHead from '@/components/layout/SectionHead.astro';
 import GridOverlay from '@/components/layout/GridOverlay.astro';
-import PostRow from '@/components/writing/PostRow.astro';
-import Button from '@/components/ui/Button.astro';
+import WritingSection from '@/components/writing/WritingSection.astro';
 import ContactGate from '@/components/contact/ContactGate.astro';
-import { entryPath, getPosts } from '@/lib/content';
-import { readingTime } from '@/lib/text';
+import { getPosts } from '@/lib/content';
 import { routeExists } from '@/lib/routes';
 import { SITE, SOCIALS } from '@/data/site';
 
 // Published posts in production; drafts too in dev and SHOW_DRAFTS=1 previews (shown with a DRAFT badge).
 const posts = await getPosts();
-// "No. 001" is the oldest post (spec §4.12)
-const numbered = [...posts].sort((a, b) => a.data.published.getTime() - b.data.published.getTime());
-const latest = posts.slice(0, 5).map((post) => {
-  const href = entryPath('blog', post.id);
-  return {
-    post,
-    no: numbered.indexOf(post) + 1,
-    minutes: Math.max(1, Math.ceil(readingTime(post.body ?? '').words / 230)),
-    href: routeExists(href) ? href : undefined,
-  };
-});
 
 // Section pages are linked once they exist (honest wayfinding: the route shown is the page it opens).
 const aboutLink = routeExists('/about/') ? { route: '/about', label: 'More about me', href: '/about/' } : undefined;
-const blogLink = routeExists('/blog/') ? { route: '/blog', label: 'All writing', href: '/blog/' } : undefined;
 const contactLink = routeExists('/contact/') ? { route: '/contact', label: 'Contact page', href: '/contact/' } : undefined;
 
 // JSON-LD Person (spec §8.7): verified fields only.
@@ -82,41 +68,7 @@ const person = {
   </section>
 
   <!-- 03 Writing -->
-  <section class="sec" id="writing" aria-labelledby="writing-title">
-    <div class="wrap">
-      <SectionHead num="03" id="writing-title" title="Writing" desc="Essays on the systems I build and the tools I build them with." link={blogLink} rss="/rss.xml" />
-      {latest.length > 0 ? (
-        <>
-          <ol class="post-list" role="list">
-            {latest.map(({ post, no, minutes, href }, i) => <PostRow post={post} no={no} minutes={minutes} href={href} reveal={i} />)}
-          </ol>
-          {latest.length < 3 && (
-            <p class="post-list__more">More soon&nbsp;— <a href="/rss.xml">subscribe via RSS</a>.</p>
-          )}
-        </>
-      ) : (
-        <div class="empty" data-reveal="1">
-          <div class="empty__head label" aria-hidden="true">
-            <span class="c-no">No.</span><span class="c-date">Date</span><span class="c-title">Title</span><span class="c-tags">Tags</span><span class="c-min">Min</span>
-          </div>
-          <div class="empty__row">
-            <span class="c-no dash" aria-hidden="true">–</span>
-            <span class="c-date dash" aria-hidden="true">–</span>
-            <p class="c-title"><strong class="t-h3">Nothing published yet.</strong>{' '}<span>New posts will be listed here, newest first, and in the RSS feed.</span></p>
-            <span class="c-tags dash" aria-hidden="true">–</span>
-            <span class="c-min dash" aria-hidden="true">–</span>
-          </div>
-          <div class="empty__foot">
-            <div class="empty__actions">
-              <Button href="/rss.xml" icon="rss">Subscribe via RSS</Button>
-              <Button variant="text" href="#contact">Get in touch</Button>
-            </div>
-            <p class="label empty__note">In a table, an en dash means “no value”. For&nbsp;now.</p>
-          </div>
-        </div>
-      )}
-    </div>
-  </section>
+  <WritingSection />
 
   <!-- 04 Contact -->
   <section class="sec" id="contact" aria-labelledby="contact-title">
@@ -141,32 +93,6 @@ const person = {
   .practice__lead { grid-column: 3 / 12; }
   .practice__transcript { grid-column: 3 / 13; }
 
-  /* 03 Writing */
-  .post-list { border-bottom: 1px solid var(--rule); }
-  .post-list__more { margin-top: 24px; font-size: 15px; color: var(--fg-2); }
-  .post-list__more a { color: var(--fg); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: var(--rule-2); }
-  .post-list__more a:hover { text-decoration-color: var(--signal-ui); }
-
-  /* empty state: the full table anatomy with one row of dashes (an en dash means "no value") */
-  .empty__head, .empty__row {
-    display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); column-gap: var(--gutter);
-  }
-  .empty__head { padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
-  .empty__row { padding: 20px 0 24px; border-bottom: 1px solid var(--rule); align-items: start; }
-  .c-no { grid-column: 1 / 2; }
-  .c-date { grid-column: 2 / 3; }
-  .c-title { grid-column: 3 / 9; }
-  .c-tags { grid-column: 9 / 11; }
-  .c-min { grid-column: 11 / 13; justify-self: end; }
-  .dash { color: var(--fg-3); font-size: 17px; line-height: 1.6; }
-  .empty__row .c-title { display: grid; gap: 6px; }
-  .empty__row .c-title strong { color: var(--fg); }
-  .empty__row .c-title span { max-width: 42em; font-size: 15px; line-height: 1.5; color: var(--fg-2); }
-  .empty__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-top: 24px; }
-  /* the button label and the text link share a baseline */
-  .empty__actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 20px; }
-  .empty__note { text-wrap: balance; }
-
   /* 04 Contact */
   .contact { row-gap: var(--stack); align-items: start; }
   .contact__lead { grid-column: 1 / 7; }
@@ -175,16 +101,9 @@ const person = {
   @media (width < 1024px) {
     .profile__lead, .practice__lead, .practice__transcript { grid-column: 1 / -1; }
     .contact__lead, .contact__side { grid-column: 1 / -1; }
-    .c-tags, .c-min { display: none; }
   }
   @media (width < 640px) {
     /* the statement says it on phones; the page stays inside its 5,500px budget */
     #practice :global(.sec-head__aside) { display: none; }
-    .empty__head { display: none; }
-    /* the header row (and its rule) is hidden, so the dash row brings its own top rule */
-    .empty__row { display: flex; flex-wrap: wrap; column-gap: 10px; row-gap: 10px; border-top: 1px solid var(--rule); }
-    .empty__row .dash + .dash::before { content: '·'; margin-right: 10px; color: var(--fg-4); }
-    .c-min { display: inline; }
-    .empty__row .c-title { order: 1; flex: 1 0 100%; }
   }
 </style>

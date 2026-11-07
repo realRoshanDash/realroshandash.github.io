@@ -1,0 +1,18 @@
+---
+/**
+ * Pull quote for MDX posts (design spec §4.17): a hanging “ in the margin column, the line at statement scale,
+ * and a source under a short signal dash, or nothing. Styled in src/styles/prose.css.
+ *
+ *   <PullQuote cite="Source">The goal isn’t to prevent retries.</PullQuote>
+ */
+interface Props {
+  cite?: string;
+}
+const { cite } = Astro.props;
+---
+
+<figure class="pull">
+  <span class="pull__mark" aria-hidden="true">“</span>
+  <blockquote class="pull__text"><slot /></blockquote>
+  {cite && <figcaption class="pull__cite label">{cite}</figcaption>}
+</figure>

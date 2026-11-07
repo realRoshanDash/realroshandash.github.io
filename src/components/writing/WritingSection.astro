@@ -1,0 +1,41 @@
+---
+/**
+ * Home §03 Writing (design spec §5.1): the latest five posts as rows, "More soon" while there are fewer than three,
+ * or the designed empty state (§4.19). The section head links to /blog once that page is built.
+ */
+import SectionHead from '@/components/layout/SectionHead.astro';
+import PostList from './PostList.astro';
+import PostListEmpty from './PostListEmpty.astro';
+import { getPostItems, WRITING_DESCRIPTION, WRITING_FEED } from './posts';
+import { routeExists } from '@/lib/routes';
+
+// Published posts in production; drafts too in dev and SHOW_DRAFTS=1 previews (shown with a DRAFT badge).
+const latest = (await getPostItems()).slice(0, 5);
+// Honest wayfinding: the route shown is the page the link opens.
+const blogLink = routeExists('/blog/') ? { route: '/blog', label: 'All writing', href: '/blog/' } : undefined;
+---
+
+<section class="sec" id="writing" aria-labelledby="writing-title">
+  <div class="wrap">
+    <SectionHead num="03" id="writing-title" title="Writing" desc={WRITING_DESCRIPTION} link={blogLink} rss={WRITING_FEED} />
+    {latest.length > 0 ? (
+      <>
+        <PostList items={latest} as="h3" reveal />
+        {latest.length < 3 && <p class="more">More soon&nbsp;— <a href={WRITING_FEED}>subscribe via RSS</a>.</p>}
+      </>
+    ) : (
+      <PostListEmpty contact="#contact" reveal={1} />
+    )}
+  </div>
+</section>
+
+<style>
+  .more { margin-top: 24px; font-size: 15px; color: var(--fg-2); }
+  .more a {
+    color: var(--fg);
+    text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+    text-decoration-color: var(--rule-2);
+    transition: text-decoration-color var(--dur-2) linear;
+  }
+  .more a:hover { text-decoration-color: var(--signal-ui); }
+</style>

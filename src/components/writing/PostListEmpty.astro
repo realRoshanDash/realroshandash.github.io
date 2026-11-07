@@ -1,0 +1,73 @@
+---
+/**
+ * The writing list with nothing in it (design spec §4.19): the full table anatomy, one row of dashes, and a way to
+ * follow along. In a table, an en dash means "no value". Used on Home and /blog while no post is published.
+ */
+import Button from '@/components/ui/Button.astro';
+import { NO_VALUE, WRITING_FEED } from './posts';
+
+interface Props {
+  /** Where "Get in touch" goes: the contact section on Home, the contact page elsewhere */
+  contact: string;
+  rss?: string;
+  /** Scroll-reveal stagger index (spec §3.4); omit for no reveal */
+  reveal?: number;
+}
+const { contact, rss = WRITING_FEED, reveal } = Astro.props;
+---
+
+<div class="empty" data-reveal={reveal}>
+  <div class="empty__head label" aria-hidden="true" data-pagefind-ignore>
+    <span class="c-no">No.</span><span class="c-date">Date</span><span class="c-title">Title</span><span class="c-tags">Tags</span><span class="c-min">Min</span>
+  </div>
+  <div class="empty__row">
+    <span class="c-no dash" aria-hidden="true">{NO_VALUE}</span>
+    <span class="c-date dash" aria-hidden="true">{NO_VALUE}</span>
+    <p class="c-title"><strong class="t-h3">Nothing published yet.</strong>{' '}<span>When posts land, they will be about backend systems, distributed systems, databases and building with AI agents.</span></p>
+    <span class="c-tags dash" aria-hidden="true">{NO_VALUE}</span>
+    <span class="c-min dash" aria-hidden="true">{NO_VALUE}</span>
+  </div>
+  <div class="empty__foot" data-pagefind-ignore>
+    <div class="empty__actions">
+      <Button href={rss} icon="rss">Subscribe via RSS</Button>
+      <Button variant="text" href={contact}>Get in touch</Button>
+    </div>
+    <p class="label empty__note">In a table, an en dash means “no value”. For now.</p>
+  </div>
+</div>
+
+<style>
+  .empty__head, .empty__row {
+    display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); column-gap: var(--gutter);
+  }
+  .empty__head { padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+  .empty__row { padding: 20px 0 24px; border-bottom: 1px solid var(--rule); align-items: start; }
+  .c-no { grid-column: 1 / 2; }
+  .c-date { grid-column: 2 / 3; }
+  .c-title { grid-column: 3 / 9; }
+  .c-tags { grid-column: 9 / 11; }
+  .c-min { grid-column: 11 / 13; justify-self: end; }
+  .dash { color: var(--fg-3); font-size: 17px; line-height: 1.6; }
+  .empty__row .c-title { display: grid; gap: 6px; }
+  .empty__row .c-title strong { color: var(--fg); }
+  .empty__row .c-title span { max-width: 42em; font-size: 15px; line-height: 1.5; color: var(--fg-2); }
+  .empty__foot {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 16px 24px; margin-top: 24px;
+  }
+  /* baseline: the text link sits on the button's text line */
+  .empty__actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 20px; }
+  .empty__note { text-wrap: balance; }
+
+  @media (width < 1024px) {
+    .c-tags, .c-min { display: none; }
+  }
+  @media (width < 640px) {
+    .empty__head { display: none; }
+    /* the dash row stacks as "– · – · –" over the two lines, between rules */
+    .empty__row { display: flex; flex-wrap: wrap; column-gap: 10px; row-gap: 10px; border-top: 1px solid var(--rule); }
+    .empty__row .dash + .dash::before { content: '·'; margin-right: 10px; color: var(--fg-4); }
+    .c-min { display: inline; }
+    .empty__row .c-title { order: 1; flex: 1 0 100%; }
+  }
+</style>

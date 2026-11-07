@@ -1,0 +1,130 @@
+---
+/**
+ * Contents (design spec §4.18), numbered like the prose's CSS counters (1, 1.1, 2). Two forms of one list:
+ * - `aside`: desktop, sticky in cols 10–12, with READ % (the dash as a progress bar) and RSS / Copy link;
+ * - `details`: below 1024px, a collapsed <details> after the meta row.
+ * toc.ts marks the current section (aria-current) in both and drives READ % from the same scroll position as
+ * the header's progress bar.
+ */
+import Icon from '@/components/ui/Icon.astro';
+import CopyLink from './CopyLink.astro';
+
+export interface TocItem {
+  depth: number;
+  slug: string;
+  text: string;
+  /** "1", "1.1", "2" */
+  n: string;
+}
+
+interface Props {
+  items: TocItem[];
+  variant: 'aside' | 'details';
+  rss?: string;
+}
+const { items, variant, rss } = Astro.props;
+---
+
+{variant === 'aside' ? (
+  <nav class="toc" aria-labelledby="toc-title" data-pagefind-ignore>
+    <p class="toc__title label" id="toc-title">Contents</p>
+    <ol class="toc__list" role="list" data-toc-list>
+      {items.map((item) => (
+        <li class:list={{ sub: item.depth > 2 }}>
+          <a href={`#${item.slug}`} data-toc-link={item.slug}><span class="n">{item.n}</span>{' '}<span>{item.text}</span></a>
+        </li>
+      ))}
+    </ol>
+    <p class="toc__read" data-requires-js>
+      <span class="label">Read</span>
+      <span class="toc__track" aria-hidden="true"><span data-read-bar></span></span>
+      <span class="label toc__pct" data-read-pct>0%</span>
+    </p>
+    <p class="toc__actions">
+      {rss && <a class="chip-btn" href={rss}>RSS<Icon name="rss" /></a>}
+      <CopyLink class="chip-btn" />
+    </p>
+  </nav>
+) : (
+  <details class="toc-mobile" data-pagefind-ignore>
+    <summary><span class="label">Contents</span><span class="toc-mobile__sign" aria-hidden="true"></span></summary>
+    <nav aria-label="Contents">
+      <ol class="toc__list" role="list">
+        {items.map((item) => (
+          <li class:list={{ sub: item.depth > 2 }}>
+            <a href={`#${item.slug}`} data-toc-link={item.slug}><span class="n">{item.n}</span>{' '}<span>{item.text}</span></a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  </details>
+)}
+
+<script>
+  import './toc.ts';
+</script>
+
+<style>
+  /* ---------- shared list ---------- */
+  .toc__list { list-style: none; }
+  .toc__list a {
+    display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 6px;
+    min-height: 40px; padding: 9px 0 9px 12px;
+    border-left: 2px solid transparent; border-bottom: 1px solid var(--rule);
+    font-size: 14px; line-height: 1.35; color: var(--fg-2);
+    transition: color var(--dur-2) linear;
+  }
+  .toc__list .n { padding-top: 1px; font-size: 12px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  .toc__list a:hover { color: var(--fg); }
+  .toc__list a[aria-current='true'] { color: var(--fg); font-weight: 550; border-left-color: var(--signal-ui); }
+  .toc__list a[aria-current='true'] .n { color: var(--fg-2); }
+  .toc__list .sub a { padding-left: 28px; }
+  .toc__list a:focus-visible { outline-offset: -2px; }
+
+  /* ---------- desktop: sticky in cols 10–12 ---------- */
+  .toc {
+    grid-column: 10 / 13; grid-row: 1; align-self: start;
+    position: sticky; top: calc(var(--nav-h) + 32px);
+    display: grid; gap: 18px;
+  }
+  .toc__title { padding-bottom: 10px; }
+  /* the list hangs 12px into the gutter so the active bar sits outside the text column */
+  .toc .toc__list {
+    margin-left: -12px; border-top: 1px solid var(--rule);
+    max-height: calc(100svh - var(--nav-h) - 240px); overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+  .toc__read { display: flex; align-items: center; gap: 12px; }
+  .toc__track { position: relative; flex: 1; height: 2px; background: var(--rule); }
+  .toc__track span {
+    position: absolute; inset: 0; background: var(--signal-ui);
+    transform-origin: left; transform: scaleX(var(--progress, 0));
+  }
+  .toc__pct { min-width: 4ch; text-align: right; }
+  .toc__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  @media (width < 1024px) {
+    .toc { display: none; }
+  }
+
+  /* ---------- below 1024px: collapsed after the meta row ---------- */
+  .toc-mobile { border-bottom: 1px solid var(--rule); }
+  .toc-mobile summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    min-height: 48px; cursor: pointer; list-style: none;
+  }
+  .toc-mobile summary::-webkit-details-marker { display: none; }
+  .toc-mobile summary .label { color: var(--fg); }
+  /* + when closed, − when open: two bars, the vertical one folds away */
+  .toc-mobile__sign { position: relative; width: 12px; height: 12px; flex: none; }
+  .toc-mobile__sign::before, .toc-mobile__sign::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; margin-top: -0.75px; background: var(--fg);
+    transition: transform var(--dur-4) var(--ease-out);
+  }
+  .toc-mobile__sign::after { transform: rotate(90deg); }
+  .toc-mobile[open] .toc-mobile__sign::after { transform: rotate(0deg); }
+  .toc-mobile .toc__list { margin-left: -12px; padding-bottom: 12px; }
+  .toc-mobile .toc__list li:last-child a { border-bottom: 0; }
+  @media (width >= 1024px) {
+    .toc-mobile { display: none; }
+  }
+</style>

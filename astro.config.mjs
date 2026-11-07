@@ -8,10 +8,13 @@ import { satteri } from '@astrojs/markdown-satteri';
 import satteriCallouts from 'satteri-callouts';
 import { SITE } from './src/data/site.ts';
 import pruneUnusedCss from './src/integrations/prune-unused-css.ts';
+import { normalizeHeadings } from './src/lib/markdown/normalize-headings.ts';
+import { wrapTables } from './src/lib/markdown/wrap-tables.ts';
 
 // satteri-callouts is typed against an older satteri plugin interface; it is runtime-compatible.
+// GitHub's five types (NOTE, TIP, IMPORTANT, WARNING, CAUTION); the marks are drawn in CSS (src/styles/prose.css).
 /** @type {any} */
-const callouts = satteriCallouts();
+const callouts = satteriCallouts({ theme: 'github', showIndicator: false });
 
 const LATIN =
   'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,' +
@@ -59,12 +62,17 @@ export default defineConfig({
     },
   ],
   markdown: {
-    // Sätteri is Astro 7's native Markdown pipeline; callouts use Obsidian/GitHub syntax: > [!NOTE]
-    processor: satteri({ hastPlugins: [callouts] }),
+    // Sätteri is Astro 7's native Markdown pipeline; callouts use GitHub syntax: > [!NOTE]. A post's top heading
+    // level becomes h2 (the page title is the h1); tables scroll inside a focusable region; footnote back-links
+    // use ↑, which the shipped Inter subset has (↩ would fall back).
+    processor: satteri({
+      hastPlugins: [normalizeHeadings, callouts, wrapTables],
+      features: { gfm: { footnotes: { backContent: '↑' } } },
+    }),
   },
   integrations: [
-    // Expressive Code must come before MDX.
-    expressiveCode({ themes: ['github-dark-default', 'github-light-default'] }),
+    // Expressive Code must come before MDX. Its options (theme, plugins, style overrides) are in ec.config.mjs.
+    expressiveCode(),
     mdx(),
     sitemap({ filter: (page) => !/\/(admin|404)(\/|$)/.test(new URL(page).pathname) }),
     pruneUnusedCss(), // unpublished sections (no pages) leave no stylesheets behind
