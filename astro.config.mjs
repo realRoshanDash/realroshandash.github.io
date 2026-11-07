@@ -7,6 +7,10 @@ import { satteri } from '@astrojs/markdown-satteri';
 import satteriCallouts from 'satteri-callouts';
 import { SITE } from './src/data/site.ts';
 
+// satteri-callouts is typed against an older satteri plugin interface; it is runtime-compatible.
+/** @type {any} */
+const callouts = satteriCallouts();
+
 // https://docs.astro.build/en/reference/configuration-reference/
 export default defineConfig({
   site: SITE.url,
@@ -21,7 +25,7 @@ export default defineConfig({
   ],
   markdown: {
     // Sätteri is Astro 7's native Markdown pipeline; callouts use Obsidian/GitHub syntax: > [!NOTE]
-    processor: satteri({ hastPlugins: [satteriCallouts()] }),
+    processor: satteri({ hastPlugins: [callouts] }),
   },
   integrations: [
     // Expressive Code must come before MDX.

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Content manager · Roshan Dash</title>
+    <!-- Absolute config path, so /admin, /admin/ and /admin/index.html all load the same file. -->
+    <link rel="cms-config-url" href="/admin/config.yml" type="application/yaml" />
+  </head>
+  <body>
+    <noscript>The content manager needs JavaScript.</noscript>
+    <!-- Sveltia CMS (https://sveltiacms.app), pinned to major version 0. A classic script, not
+         type="module", as the Sveltia docs require. Allowed by the /admin/* CSP in public/_headers. -->
+    <script src="https://unpkg.com/@sveltia/cms@0/dist/sveltia-cms.js"></script>
+  </body>
+</html>

@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Roshan Dash — personal site: writing, trade ideas, and a captcha-gated contact card.",
+  "description": "Roshan Dash \u2014 personal site: writing, trade ideas, and a captcha-gated contact card.",
   "engines": {
     "node": ">=22.23.4"
   },
@@ -15,7 +15,8 @@
     "test": "node --test \"tests/**/*.test.ts\"",
     "seal-contact": "node scripts/seal-contact.mjs",
     "new:post": "node scripts/new-entry.mjs post",
-    "new:trade": "node scripts/new-entry.mjs trade"
+    "new:trade": "node scripts/new-entry.mjs trade",
+    "new:note": "node scripts/new-entry.mjs note"
   },
   "dependencies": {
     "@astrojs/markdown-satteri": "^0.4.7",
