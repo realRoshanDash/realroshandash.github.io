@@ -21,22 +21,7 @@ const contact = linkTo('/contact/', '/#contact');
       <div class="nf__in">
         <p class="nf__code" style={lsbStyle('404', 'thin')}><span class="sr-only">Error </span>404</p>
         <h1 class="nf__title t-display" style={lsbStyle('Nothing here.')}>Nothing here.</h1>
-        <p class="t-lede nf__body"><span data-nf-where>There’s no page at this address.</span> It may have moved when the site was rebuilt.</p>
-        {/* Names the missing path before first paint, so nothing reflows. Inserted as text, never as HTML. */}
-        <script is:inline>
-          (function () {
-            var where = document.querySelector('[data-nf-where]');
-            var path = location.pathname;
-            if (!where || /^\/404(\.html)?\/?$/.test(path)) return;
-            try { path = decodeURI(path); } catch (e) {}
-            if (path.length > 80) path = path.slice(0, 79) + '…';
-            var code = document.createElement('code');
-            code.className = 'nf__path';
-            code.textContent = path;
-            where.textContent = 'There’s no page at ';
-            where.append(code, '.');
-          })();
-        </script>
+        <p class="t-lede nf__body">There’s no page at this address. It may have moved when the site was rebuilt.</p>
         <div class="nf__actions">
           <Button variant="primary" href="/" icon="arrow-right">Go home</Button>
           <button class="btn nf__search" type="button" data-open-palette data-requires-js aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
@@ -81,10 +66,6 @@ const contact = linkTo('/contact/', '/#contact');
 
   .nf__title { margin-top: clamp(20px, 2.4vw, 36px); }
   .nf__body { max-width: 34em; margin-top: clamp(16px, 1.8vw, 24px); }
-  .nf__body :global(.nf__path) {
-    font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.86em; letter-spacing: 0;
-    color: var(--fg); overflow-wrap: anywhere;
-  }
 
   .nf__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: clamp(28px, 3vw, 40px); }
   .nf__search { gap: 12px; padding-right: 7px; }
