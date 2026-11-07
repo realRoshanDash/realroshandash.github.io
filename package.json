@@ -12,7 +12,7 @@
     "build": "astro build && pagefind --site dist --output-subdir pagefind",
     "preview": "astro preview",
     "check": "astro check",
-    "test": "node --test tests/",
+    "test": "node --test \"tests/**/*.test.ts\"",
     "seal-contact": "node scripts/seal-contact.mjs",
     "new:post": "node scripts/new-entry.mjs post",
     "new:trade": "node scripts/new-entry.mjs trade"
