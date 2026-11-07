@@ -18,12 +18,14 @@ import { SITE, SOCIALS } from '@/data/site';
 
 <style>
   .facts { grid-column: 3 / 13; border-bottom: 1px solid var(--rule); }
+  /* the rows sit on the page grid (10 of its 12 columns on desktop, all 8 on tablet), label, value and index on one baseline */
   .facts > div {
     display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); column-gap: var(--gutter);
+    align-items: baseline;
     padding: 16px 0 18px;
     border-top: 1px solid var(--rule);
   }
-  .facts dt { grid-column: 1 / 3; padding-top: 3px; }
+  .facts dt { grid-column: 1 / 3; }
   .facts dd { grid-column: 3 / 9; font-size: 17px; line-height: 1.45; }
   .facts dd .sub { color: var(--fg-2); }
   .facts dd a {
@@ -34,7 +36,13 @@ import { SITE, SOCIALS } from '@/data/site';
   }
   .facts dd a:hover { border-color: var(--signal-ui); }
   .facts .idx { grid-column: 9 / 11; justify-self: end; font-size: 13px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
-  @media (width < 1024px) { .facts { grid-column: 1 / -1; } }
+  @media (width < 1024px) {
+    .facts { grid-column: 1 / -1; }
+    .facts > div { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+    .facts dt { grid-column: 1 / 3; }
+    .facts dd { grid-column: 3 / 8; }
+    .facts .idx { grid-column: 8; }
+  }
   @media (width < 640px) {
     .facts > div { grid-template-columns: 1fr; row-gap: 6px; }
     .facts dt, .facts dd { grid-column: 1; }

@@ -19,16 +19,18 @@ interface Props {
 const { id = 'contact-gate' } = Astro.props;
 const bits = sealed.difficulty;
 const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in/roshan-dash' };
+// The idle subtitle is the longest of the gate's subtitles; the head reserves its height in every state (CSS below).
+const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0second.';
 ---
 
 <div class="contact-card" id={id} data-gate data-state="idle">
   <div class="gate" data-requires-js>
     <div class="gate__head">
-      <button type="button" class="gate__check" role="checkbox" aria-checked="false" data-start aria-describedby={`${id}-sub`}>
+      <button type="button" class="gate__check" role="checkbox" aria-checked="false" data-start aria-labelledby={`${id}-title`} aria-describedby={`${id}-sub`}>
         <span class="gate__box" aria-hidden="true"><span class="gate__spin"></span><svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 4.8"></path></svg></span>
-        <span class="gate__text">
-          <span class="gate__title" data-label>Verify you're human</span>
-          <span class="gate__sub" id={`${id}-sub`} data-sub>Runs a short proof-of-work in your browser. About a second.</span>
+        <span class="gate__text" data-reserve={IDLE_SUB}>
+          <span class="gate__title" id={`${id}-title`} data-label>Verify you're human</span>
+          <span class="gate__sub" id={`${id}-sub`} data-sub>{IDLE_SUB}</span>
         </span>
       </button>
       <span class="gate__side">
@@ -42,8 +44,8 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
     </div>
     <dl class="gate__stats">
       <div><dt class="label">Hashes</dt><dd data-hashes>0</dd></div>
-      <div><dt class="label">Rate</dt><dd data-rate>—</dd></div>
-      <div><dt class="label">Threads</dt><dd data-threads>—</dd></div>
+      <div><dt class="label">Rate</dt><dd data-rate>–</dd></div>
+      <div><dt class="label">Threads</dt><dd data-threads>–</dd></div>
       <div><dt class="label">Time</dt><dd data-time>0.00 s</dd></div>
     </dl>
     <p class="gate__readout" aria-hidden="true" data-stats>sha256(salt || 01 || n) == check · n &lt; 2^{bits}</p>
@@ -52,7 +54,7 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
   <dl class="channels" data-fields>
     <div class="channel channel--email" data-email-row>
       <dt class="label">Email</dt>
-      <dd class="channel__value" data-email-value>••••••@roshandash.com</dd>
+      <dd class="channel__value" data-email-value><span aria-hidden="true">••••••••@roshandash.com</span><span class="sr-only">Hidden until you verify</span></dd>
       <dd class="channel__act">
         <button type="button" class="chip-btn" disabled data-locked><Icon name="lock" />Locked</button>
         <button type="button" class="chip-btn" hidden data-copy><Icon name="copy" /><span data-copy-label>Copy</span></button>
@@ -104,11 +106,20 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
   .contact-card[data-state='verified'] .gate__box svg { stroke-dashoffset: 0; }
   .contact-card[data-state='error'] .gate__box { border-style: dashed; }
   .contact-card[data-state='unsupported'] .gate__box { border-color: var(--fg-4); }
-  .gate__text { display: flex; flex-direction: column; }
-  .gate__title { font-size: 16px; font-weight: 550; letter-spacing: -0.015em; }
-  .gate__sub { margin-top: 2px; font-size: 13px; line-height: 1.4; color: var(--fg-3); }
-  .gate__side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+  /* The head keeps its idle height in every state, so the stats and channels below never jump: the idle subtitle
+     (the longest) is laid out invisibly in the same cell as the live one and holds the row open. */
+  .gate__text { display: grid; }
+  .gate__title { grid-area: 1 / 1; font-size: 16px; font-weight: 550; letter-spacing: -0.015em; }
+  .gate__sub, .gate__text::after { grid-area: 2 / 1; margin-top: 2px; font-size: 13px; line-height: 1.4; text-wrap: balance; }
+  .gate__sub { color: var(--fg-3); }
+  .gate__text::after { content: attr(data-reserve); visibility: hidden; }
+  /* Cancel replaces the tag while verifying, and Forget replaces it when cached (spec §4.15). They share one grid
+     cell and the tag only turns invisible, so the side (and the text beside it) never changes size between states. */
+  .gate__side { display: grid; justify-items: end; align-items: center; flex: none; }
+  .gate__side > * { grid-area: 1 / 1; }
   .gate__tag { text-align: right; }
+  .contact-card[data-state='verifying'] .gate__tag,
+  .contact-card[data-cached] .gate__tag { visibility: hidden; }
   .gate__action { font-size: 13px; }
 
   .gate__bar { position: relative; height: 2px; background: var(--rule); }
@@ -127,35 +138,46 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
   .gate__stats dd { font-size: 15px; font-weight: 550; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .contact-card[data-cached] .gate__stats { display: none; }
 
+  /* wraps rather than truncates: the verified line ends with the timing, the number it exists to show */
   .gate__readout {
     padding: 10px 16px 12px;
     border-top: 1px solid var(--rule);
     font: 12.5px/1.5 var(--font-mono, monospace);
     color: var(--fg-3);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    overflow-wrap: anywhere;
   }
   .gate__readout :global(b) { font-weight: 400; color: var(--signal-text); }
   .gate__readout :global(.icon--inline) { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; }
 
   /* ---- channels ---- */
   .channels { border-bottom: 1px solid var(--rule); }
+  /* label and value on one baseline; the actions centre on the row */
   .channel,
   .channels :global(.channel) {
-    display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: var(--gutter);
+    display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: baseline; gap: var(--gutter);
     min-height: 64px; padding: 14px 0;
     border-top: 1px solid var(--rule);
   }
   .channels :global(.channel__value) { min-width: 0; font-size: 18px; font-weight: 550; letter-spacing: -0.02em; overflow-wrap: anywhere; }
   .channels :global(.channel__value a:hover) { color: var(--signal-text); }
-  .channel__act { display: flex; gap: 8px; align-items: center; }
+  .channel__act { display: flex; gap: 8px; align-items: center; align-self: center; }
   .channels__note { font-size: 14px; color: var(--fg-2); }
+  /* The label is exactly one page column of the 5-column side (desktop) or two of the 8 (tablet), so the values
+     start on a column line: col 9 on desktop, col 3 on tablet, like the facts above. */
+  @media (width >= 1024px) {
+    .channel,
+    .channels :global(.channel) { grid-template-columns: calc((100% - 4 * var(--gutter)) / 5) minmax(0, 1fr) auto; }
+  }
+  @media (640px <= width < 1024px) {
+    .channel,
+    .channels :global(.channel) { grid-template-columns: calc((100% - 7 * var(--gutter)) / 8 * 2 + var(--gutter)) minmax(0, 1fr) auto; }
+  }
 
   @media (width < 640px) {
     .gate__tag { display: none; }
     .gate__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gate__stats > div:nth-child(3) { border-left: 0; }
     .gate__stats > div:nth-child(n + 3) { border-top: 1px solid var(--rule); }
-    .gate__readout { white-space: normal; overflow-wrap: anywhere; }
     .channel,
     .channels :global(.channel) { grid-template-columns: 72px minmax(0, 1fr); row-gap: 10px; }
     .channel__act { grid-column: 2 / -1; }
@@ -163,6 +185,20 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
   }
   @media (prefers-reduced-motion: reduce) {
     .contact-card[data-state='verifying'] .gate__spin { animation: none; border-color: transparent; border-top-color: var(--signal-ui); }
+  }
+  /* Forced colours (Windows High Contrast): backgrounds become Canvas, so the box, its check, the spinner and the
+     progress fill are drawn with system colours instead, and "Verified" still looks checked. */
+  @media (forced-colors: active) {
+    .gate__box, .gate__bar [data-bar], .gate__expected { forced-color-adjust: none; }
+    .gate__box { border-color: CanvasText; }
+    .gate__check:not(:disabled):hover .gate__box { border-color: Highlight; }
+    .gate__box svg { stroke: HighlightText; }
+    .gate__spin { border-top-color: Highlight; border-right-color: Highlight; }
+    .contact-card[data-state='verifying'] .gate__box,
+    .contact-card[data-state='unsupported'] .gate__box { border-color: GrayText; }
+    .contact-card[data-state='verified'] .gate__box { background: Highlight; border-color: Highlight; }
+    .gate__bar [data-bar] { background: Highlight; }
+    .gate__expected { background: CanvasText; }
   }
 </style>
 
@@ -180,7 +216,7 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
   const ARROW = '<svg class="icon icon--inline" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" aria-hidden="true"><path d="M2 8h11M9.5 4.5 13 8l-3.5 3.5"></path></svg>';
 
   const SUB = {
-    idle: 'Runs a short proof-of-work in your browser. About a second.',
+    idle: 'Runs a short proof-of-work in your browser. About a\u00a0second.',
     verifying: 'Hashing in your browser.',
     verified: 'Address decrypted on this device.',
     cached: 'Verified earlier in this tab.',
@@ -241,7 +277,8 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
     const copyLabel = $('[data-copy-label]');
     const mailto = $<HTMLAnchorElement>('[data-mailto]');
     const idleReadout = stats.textContent ?? '';
-    const mask = emailValue.textContent ?? '';
+    // the masked value is markup (bullets hidden from screen readers + an sr-only note), so keep the nodes
+    const mask = [...emailValue.childNodes].map((node) => node.cloneNode(true));
     let controller: AbortController | null = null;
 
     const setProgress = (fraction: number) => {
@@ -259,16 +296,16 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
     const showProgress = (p: SolveProgress) => {
       setProgress(Math.min(0.99, p.fraction));
       cells.hashes.textContent = count.format(p.hashes);
-      cells.rate.textContent = p.hashRate ? rate(p.hashRate) : '—';
+      cells.rate.textContent = p.hashRate ? rate(p.hashRate) : '–';
       cells.threads.textContent = p.workers ? String(p.workers) : 'main';
       cells.time.textContent = seconds(p.elapsedMs);
-      stats.textContent = `tested ${count.format(p.hashes)} of ${count.format(p.total)} (${Math.round(p.fraction * 100)}%) · expected ~50% · ${p.hashRate ? rate(p.hashRate) : '—'}`;
+      stats.textContent = `tested ${count.format(p.hashes)} of ${count.format(p.total)} (${Math.round(p.fraction * 100)}%) · expected ~50% · ${p.hashRate ? rate(p.hashRate) : '–'}`;
     };
     const reset = () => {
       setProgress(0);
       cells.hashes.textContent = '0';
-      cells.rate.textContent = '—';
-      cells.threads.textContent = '—';
+      cells.rate.textContent = '–';
+      cells.threads.textContent = '–';
       cells.time.textContent = '0.00 s';
       stats.textContent = idleReadout;
     };
@@ -306,17 +343,22 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
         try {
           await navigator.clipboard.writeText(contact.email);
           copyLabel.textContent = 'Copied';
+          live.textContent = 'Email address copied.';
         } catch {
           const target = emailValue.querySelector('a') ?? emailValue;
           getSelection()?.selectAllChildren(target);
           copyLabel.textContent = apple ? 'Press ⌘C' : 'Press Ctrl+C';
+          live.textContent = apple ? 'Address selected. Press Command C to copy.' : 'Address selected. Press Control C to copy.';
         }
         setTimeout(() => (copyLabel.textContent = 'Copy'), 2000);
       };
+      // disabling the focused checkbox would drop focus to <body>: hand it to the first action instead
+      const hadFocus = document.activeElement === button;
       locked.hidden = true;
       copy.hidden = false;
       mailto.hidden = false;
       button.disabled = true;
+      if (hadFocus) copy.focus();
       setProgress(1);
     }
 
@@ -337,7 +379,7 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
       forget.hidden = true;
       button.disabled = false;
       for (const extra of gate.querySelectorAll('[data-extra]')) extra.remove();
-      emailValue.textContent = mask;
+      emailValue.replaceChildren(...mask.map((node) => node.cloneNode(true)));
       locked.hidden = false;
       copy.hidden = true;
       mailto.hidden = true;
@@ -364,7 +406,9 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
         cells.hashes.textContent = count.format(result.hashes);
         cells.time.textContent = seconds(result.ms);
         writeCachedContact(sealed, result.contact);
-        stats.innerHTML = `n = <b>${count.format(result.nonce)}</b> ${ARROW} key = sha256(salt || 02 || n) ${ARROW} ${sealed.alg} ok · ${seconds(result.ms)}`;
+        // when the line wraps, "AES-256-GCM ok · 0.31 s" moves as one piece, so the timing never sits alone
+        const outcome = `${sealed.alg} ok · ${seconds(result.ms)}`.replaceAll(' ', '&nbsp;');
+        stats.innerHTML = `n = <b>${count.format(result.nonce)}</b> ${ARROW} key = sha256(salt || 02 || n) ${ARROW} ${outcome}`;
         setState('verified', 'Verified', SUB.verified);
         live.textContent = 'Verified. Email address revealed.';
         render(result.contact, true);
@@ -373,6 +417,7 @@ const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in
         if (controller.signal.aborted) {
           setState('idle', "Verify you're human", SUB.cancelled);
           live.textContent = 'Verification cancelled.';
+          button.focus(); // Cancel (the only way to abort) has just been hidden
         } else if (err instanceof ContactError && err.code === 'unsupported') {
           setState('unsupported', "Can't verify here", SUB.unsupported);
           button.disabled = true;

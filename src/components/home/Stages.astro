@@ -1,7 +1,8 @@
 ---
 /**
  * Fig. 02 — agents inside each stage of a change (design spec §4.14). Conceptual, HTML so it reflows.
- * The loop row is what machines say, so it's set in mono.
+ * The loop row is what machines say, so it's set in mono. On desktop the two inner rules of the ruled box sit on the
+ * col-5 and col-9 hairlines; below 1024px the stages stack (thirds can't land on an 8-column grid).
  */
 import Icon from '@/components/ui/Icon.astro';
 
@@ -23,19 +24,41 @@ const STAGES = [
       </li>
     ))}
   </ol>
-  <figcaption class="label" id="fig-02">Fig. 02 — Agents inside each stage of a change. Conceptual.</figcaption>
+  <figcaption class="label" id="fig-02">Fig. 02 — Agents inside each stage: plan&nbsp;·&nbsp;act&nbsp;·&nbsp;check. Conceptual.</figcaption>
 </figure>
 
 <style>
   .stages-fig { grid-column: 1 / -1; display: grid; gap: 14px; }
-  .stages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* Column pitch = (box width + gutter) / 12; the box's 1px borders sit on the outer hairlines, and each 1px gap
+     falls exactly on a hairline: [4 pitches − 1px] [gap] [4 pitches − 1px] [gap] [the rest]. */
+  .stages {
+    --pitch: calc((100% + 2px + var(--gutter)) / 12);
+    grid-template-columns: calc(4 * var(--pitch) - 1px) calc(4 * var(--pitch) - 1px) minmax(0, 1fr);
+  }
   .stage { display: flex; flex-direction: column; gap: 10px; min-height: 200px; padding: 20px 20px 24px; }
   .stage__name { margin-top: 2px; font-size: clamp(26px, 2.4vw, 36px); line-height: 1; font-weight: 700; letter-spacing: -0.035em; font-variation-settings: var(--opsz-display); }
   .stage__verbs { font-size: 15px; color: var(--fg-2); }
   .stage__loop { margin-top: auto; display: inline-flex; align-items: center; gap: 8px; color: var(--fg-3); }
   .stage__loop :global(.icon) { width: 14px; height: 14px; color: var(--signal-ui); }
+  /* tablet: one row per stage on one baseline, set on the 8-column pitch: numeral (cols 1–2, inset like the desktop
+     cells), name (from the col-3 line), verbs (col 5), loop (col 7) */
+  @media (width < 1024px) {
+    .stages { grid-template-columns: minmax(0, 1fr); }
+    .stage {
+      --pitch: calc((100% + 2px + var(--gutter)) / 8);
+      display: grid; align-items: baseline; column-gap: 0;
+      grid-template-columns: calc(2 * var(--pitch) - 1px) calc(2 * var(--pitch)) calc(2 * var(--pitch)) minmax(0, 1fr);
+      min-height: 0; padding: 18px 0 20px;
+    }
+    .stage > .label { padding-left: 20px; }
+    .stage__name { margin-top: 0; font-size: 28px; }
+    .stage__loop { margin-top: 0; }
+  }
+  /* phone: compact stacked cells; the loop is in the caption */
   @media (width < 640px) {
-    .stages { grid-template-columns: 1fr; }
-    .stage { min-height: auto; }
+    .stage { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; }
+    .stage > .label { padding-left: 0; }
+    .stage__name { margin-top: 2px; font-size: 26px; }
+    .stage__loop { display: none; }
   }
 </style>

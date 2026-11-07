@@ -24,10 +24,14 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Load sequence: first page view of a session only (the head script adds html.intro-seen afterwards).
-   Every element is already in its final position; these only draw decorative marks. */
-html:not(.intro-seen) .gridlines i { animation: grid-draw var(--dur-7) var(--ease-in-out) both; animation-delay: calc(var(--i, 0) * 30ms); }
-html:not(.intro-seen) .hero__name .line--dash::after { animation: dash-draw var(--dur-6) var(--ease-out) 120ms both; }
-html:not(.intro-seen) .hero .crop { animation: fade-in 400ms linear 300ms both; }
+   Every element is already in its final position; these only draw decorative marks. Under reduced motion they don't
+   run at all (§3.7: no dash draw, the lines are simply present): shortening the duration alone would still leave the
+   delays, and with fill: both the marks would sit at their start frame until those ran out. */
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.intro-seen) .gridlines i { animation: grid-draw var(--dur-7) var(--ease-in-out) both; animation-delay: calc(var(--i, 0) * 30ms); }
+  html:not(.intro-seen) .hero__name .line--dash::after { animation: dash-draw var(--dur-6) var(--ease-out) 120ms both; }
+  html:not(.intro-seen) .hero .crop { animation: fade-in 400ms linear 300ms both; }
+}
 
 /* Page transitions: native cross-document View Transitions (no client router) */
 @view-transition { navigation: auto; }
@@ -45,6 +49,7 @@ html:not(.intro-seen) .hero .crop { animation: fade-in 400ms linear 300ms both; 
   @view-transition { navigation: none; }
   *, *::before, *::after {
     animation-duration: 1ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     transition-delay: 0s !important;

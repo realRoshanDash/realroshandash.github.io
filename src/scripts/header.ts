@@ -1,8 +1,10 @@
 /**
  * Header behaviour on every page (design spec §4.2–4.3, §8.3): scrolled state, reading progress (posts), the
  * platform's shortcut label, the ⌘K hand-off to the palette, the mobile menu and the layout-grid toggle.
+ * It also starts the Singapore clock, once, for every [data-clock] on the page (meta row, menu, footer).
  */
 import { requestPalette } from './palette-bridge.ts';
+import './clock.ts';
 
 const root = document.documentElement;
 const header = document.querySelector<HTMLElement>('[data-header]');
@@ -34,8 +36,10 @@ const platform = (navigator as Navigator & { userAgentData?: { platform?: string
 if (/Mac|iPhone|iPad/.test(platform)) for (const kbd of document.querySelectorAll('[data-kbd]')) kbd.textContent = '⌘K';
 for (const button of document.querySelectorAll('[data-open-palette]')) {
   button.addEventListener('click', () => {
+    const fromMenu = Boolean(menu?.contains(button));
     setMenu(false, false);
-    requestPalette('button');
+    // Nothing claimed the request (no palette on this page): don't leave focus on <body>.
+    if (!requestPalette('button') && fromMenu) menuButton?.focus();
   });
 }
 addEventListener('keydown', (event) => {
@@ -43,12 +47,13 @@ addEventListener('keydown', (event) => {
   if (event.key.toLowerCase() === 'k' && requestPalette('shortcut')) event.preventDefault();
 });
 
-/* ---- layout grid (§3.8): [data-grid-toggle] buttons tint the columns. Session-only; no single-key shortcut. ---- */
+/* ---- layout grid (§3.8): [data-grid-toggle] buttons tint the columns. Session-only; no single-key shortcut.
+   The label names the action ("Show…" / "Hide…"), so there is no aria-pressed: "Hide layout grid, pressed" would
+   contradict itself. ---- */
 const gridButtons = document.querySelectorAll<HTMLButtonElement>('[data-grid-toggle]');
 export function toggleGrid(force?: boolean): boolean {
   const on = root.classList.toggle('show-grid', force);
   for (const button of gridButtons) {
-    button.setAttribute('aria-pressed', String(on));
     const label = button.querySelector('[data-grid-label]');
     if (label) label.textContent = on ? 'Hide layout grid' : 'Show layout grid';
   }
@@ -67,7 +72,7 @@ function setMenu(open: boolean, restoreFocus = true): void {
   menuButton.setAttribute('aria-expanded', String(open));
   menuButton.textContent = open ? 'Close' : 'Menu';
   root.classList.toggle('menu-open', open);
-  for (const el of document.querySelectorAll<HTMLElement>('main, .site-footer')) el.inert = open;
+  for (const el of document.querySelectorAll<HTMLElement>('main, .site-footer, .skip')) el.inert = open;
   if (open) {
     if (!calm) {
       menu.animate([{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.16,1,.3,1)' });
@@ -83,8 +88,21 @@ function setMenu(open: boolean, restoreFocus = true): void {
 
 menuButton?.addEventListener('click', () => setMenu(Boolean(menu?.hidden)));
 for (const link of menu?.querySelectorAll('a') ?? []) link.addEventListener('click', () => setMenu(false, false));
+
+/* While the sheet is open, Tab cycles through the header and the sheet (everything else is inert). */
+const focusables = (scope: Element | null | undefined) =>
+  [...(scope?.querySelectorAll<HTMLElement>('a[href], button:not(:disabled)') ?? [])].filter((el) => el.getClientRects().length > 0);
 addEventListener('keydown', (event) => {
   if (event.key === 'Escape') setMenu(false);
+  if (event.key !== 'Tab' || !menu || menu.hidden) return;
+  const cycle = [...focusables(header), ...focusables(menu)];
+  const first = cycle[0];
+  const last = cycle[cycle.length - 1];
+  if (!first || !last) return;
+  if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+  }
 });
 matchMedia('(width >= 1024px)').addEventListener('change', (event) => {
   if (event.matches) setMenu(false, false);

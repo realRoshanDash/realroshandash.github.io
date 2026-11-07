@@ -17,7 +17,7 @@ const year = new Date().getFullYear();
         <a class="brand" href="/"><span class="brand__dash" aria-hidden="true"></span>{SITE.name}</a>
         <p>Software engineer in {SITE.location}&nbsp;— backend systems, with AI agents in the loop.</p>
       </div>
-      <nav class="site-footer__col site-footer__index" aria-label="Footer">
+      <nav class="site-footer__col site-footer__index" id="footer-index" aria-label="Footer">
         <span class="label">Index</span>
         <a href="/">Home</a>
         {NAV.map((item) => <a href={linkTo(item.href, item.anchor)}>{item.label}</a>)}
@@ -30,7 +30,7 @@ const year = new Date().getFullYear();
       <div class="site-footer__col site-footer__colophon">
         <span class="label">Colophon</span>
         <p>Set in Inter and JetBrains Mono. Twelve columns, one signal colour: #FF5A1F. Built with Astro.</p>
-        <button type="button" class="link-btn" data-grid-toggle aria-pressed="false"><span data-grid-label>Show layout grid</span></button>
+        <button type="button" class="link-btn" data-grid-toggle data-requires-js><span data-grid-label>Show layout grid</span></button>
       </div>
       <div class="site-footer__col site-footer__time">
         <span class="label">Local time</span>
@@ -49,23 +49,32 @@ const year = new Date().getFullYear();
 </footer>
 
 <style>
-  .site-footer { padding-top: 28px; border-top: 1px solid var(--rule-2); background: var(--bg); }
+  /* No background of its own: the body paints --bg, and the fixed column grid shows through here too. */
+  .site-footer { padding-top: 28px; border-top: 1px solid var(--rule-2); }
   .site-footer .wrap { container-type: inline-size; } /* enables cqi for the wordmark */
-  .site-footer__top { row-gap: 32px; }
+  /* One rhythm in every column: an 18px heading row (label, or the brand), then 21px lines on a 31px pitch, so the
+     headings share a baseline and so do the first lines under them. */
+  .site-footer__top { row-gap: 32px; align-items: first baseline; }
 
-  .site-footer__brand { grid-column: 1 / 5; display: flex; flex-direction: column; gap: 10px; }
+  .site-footer__brand { grid-column: 1 / 5; display: flex; flex-direction: column; gap: 11px; }
   .site-footer__brand p { max-width: 24em; font-size: 14px; line-height: 1.5; color: var(--fg-2); }
-  .brand { display: inline-flex; align-items: center; gap: 10px; width: max-content; min-height: 32px; font-size: 15px; font-weight: 650; letter-spacing: -0.02em; }
-  .brand__dash { width: 20px; height: 5px; background: var(--signal); transform: translateY(1px); }
+  .brand {
+    position: relative;
+    display: inline-flex; align-items: baseline; gap: 10px; width: max-content;
+    font-size: 15px; line-height: 18px; font-weight: 650; letter-spacing: -0.02em;
+  }
+  .brand::before { content: ''; position: absolute; inset: -7px -6px; } /* 32px hit area */
+  .brand__dash { align-self: center; width: 20px; height: 5px; background: var(--signal); transform: translateY(1px); }
 
-  .site-footer__col { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; font-size: 14px; }
-  .site-footer__col .label { margin-bottom: 4px; }
-  .site-footer__col a { display: inline-flex; align-items: center; min-height: 32px; width: max-content; color: var(--fg-2); transition: color var(--dur-2) linear; }
+  .site-footer__col { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.5; }
+  .site-footer__col .label { line-height: 18px; }
+  .site-footer__col a { position: relative; display: inline-flex; align-items: center; width: max-content; color: var(--fg-2); transition: color var(--dur-2) linear; }
+  .site-footer__col a::before { content: ''; position: absolute; inset: -5px 0; } /* 31px hit areas that just meet */
   .site-footer__col a:hover { color: var(--fg); }
   .site-footer__index { grid-column: 5 / 7; }
   .site-footer__elsewhere { grid-column: 7 / 9; }
   .site-footer__colophon { grid-column: 9 / 11; }
-  .site-footer__colophon p { line-height: 1.5; color: var(--fg-2); }
+  .site-footer__colophon p { color: var(--fg-2); }
   .site-footer__time { grid-column: 11 / 13; }
   .site-footer__clock { display: flex; justify-content: space-between; gap: 12px; width: 100%; color: var(--fg-2); }
   .clock { display: inline-block; min-inline-size: 9ch; text-align: right; color: var(--fg); font-weight: 550; font-variant-numeric: tabular-nums; }
@@ -96,8 +105,7 @@ const year = new Date().getFullYear();
     .site-footer__colophon, .site-footer__time { grid-column: 1 / -1; }
     .site-footer__bottom > *, .site-footer__bottom > :nth-child(2) { grid-column: 1 / -1; }
   }
+  @media (forced-colors: active) {
+    .brand__dash { forced-color-adjust: none; background: CanvasText; }
+  }
 </style>
-
-<script>
-  import '@/scripts/clock.ts';
-</script>

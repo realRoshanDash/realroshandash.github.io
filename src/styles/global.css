@@ -81,6 +81,7 @@ main:focus { outline: none; }
 }
 .skip:focus-visible { transform: none; }
 html:not(.js) [data-requires-js] { display: none !important; }
+html.js [data-nojs-only] { display: none !important; }
 
 /* The visible column grid (GridOverlay.astro, rendered once in Base.astro; bands repeat it locally) */
 .gridlines { position: fixed; inset: 0; z-index: var(--z-grid); pointer-events: none; contain: strict; }
@@ -97,6 +98,11 @@ html:not(.js) [data-requires-js] { display: none !important; }
   .gridlines i:nth-child(4) { border-right: 1px solid var(--grid-line); }
 }
 html.show-grid .gridlines i { background: var(--grid-tint); border-color: var(--grid-tint-line); }
+/* Forced colours would turn the 4.5% hairlines into solid CanvasText rules through every line of text: the grid is
+   decoration, so it (and its toggle) steps aside there. */
+@media (forced-colors: active) {
+  .gridlines, [data-grid-toggle] { display: none; }
+}
 main, .site-footer { position: relative; z-index: var(--z-content); }
 
 /* Ruled "newspaper" grid: cells separated by 1px of the rule colour */

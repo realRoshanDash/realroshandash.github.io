@@ -121,9 +121,10 @@
   --plate-focus: #ff7040;
   --plate-gain: #7adcc0;
   --plate-loss: #d9506c;
-  /* The portrait's studio backdrop, rebuilt in CSS so the plate can frame the cut-out at any size. */
-  --portrait-backdrop: radial-gradient(80% 70% at 45% 32%,
-    #2e2e30 0%, #2a2a2c 20%, #232325 40%, #1c1c1d 60%, #141415 80%, #0b0b0c 100%);
+  /* The portrait's studio backdrop, rebuilt in CSS so the plate can frame the cut-out at any size. The stops are
+     their own token so the desktop plate can redraw the same ellipse in units of F when it is wider than the print. */
+  --portrait-backdrop-stops: #2e2e30 0%, #2a2a2c 20%, #232325 40%, #1c1c1d 60%, #141415 80%, #0b0b0c 100%;
+  --portrait-backdrop: radial-gradient(80% 70% at 45% 32%, var(--portrait-backdrop-stops));
 }
 
 .invert { background: var(--bg); color: var(--fg); }
@@ -191,4 +192,4 @@
   --z-skip: 100;
 }
 @media (width < 1024px) { :root { --cols: 8; } }
-@media (width < 640px) { :root { --cols: 4; --nav-h: 56px; } }
+@media (width < 640px) { :root { --cols: 4; --nav-h: 56px; --section-pad: 48px; } }

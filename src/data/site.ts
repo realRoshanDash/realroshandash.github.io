@@ -39,5 +39,11 @@ export const NAV = [
   { label: 'Contact', href: '/contact/', anchor: '/#contact' },
 ] as const;
 
+/**
+ * Whether this build ships the ⌘K command palette (design spec §4.5). Until it does, no search button, menu
+ * entry or shortcut hint is rendered, so the chrome never offers a control that does nothing.
+ */
+export const HAS_PALETTE = false;
+
 export const TRADE_DISCLAIMER =
   'Trade ideas are personal notes and opinions for educational purposes — not financial advice. I may hold positions in the instruments discussed. Do your own research; markets can and do go against you.';

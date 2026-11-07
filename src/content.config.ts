@@ -99,7 +99,7 @@ const trades = defineCollection({
 });
 
 /**
- * Notes — short-form: market notes, TILs, links, a photo with a caption. Title optional.
+ * Notes — short-form: TILs, links, a photo with a caption. Title optional.
  *   src/content/notes/<yyyy-mm-dd-slug>.md  (or a folder with index.md + images)
  */
 const notes = defineCollection({

@@ -3,8 +3,9 @@
 # Sveltia CMS for roshandash.com, served at /admin/. Docs: https://sveltiacms.app/en/docs
 # Every save is a commit to master, and GitHub Actions deploys each commit to GitHub Pages.
 #
-# The collections mirror src/content.config.ts (blog, trades, notes): same field names, same
-# rules. Change the schema there first, then here. Each entry is a page bundle
+# The collections mirror src/content.config.ts (blog, notes): same field names, same rules.
+# Change the schema there first, then here. This file is served publicly, so it lists only the
+# collections the site publishes (README.md → "Front matter"). Each entry is a page bundle
 # (<slug>/index.md) with its images in the same folder, referenced by bare file name
 # (cover: photo.webp), so Astro's image() helper finds and optimises them.
 
@@ -41,7 +42,7 @@ media_libraries:
       slugify_filename: true
       # Shrink phone photos before they're committed (Astro re-optimises at build time anyway).
       # HEIC has to be converted because the build's image pipeline (sharp) can't read it.
-      # PNGs (chart screenshots) are left as they are.
+      # PNGs (screenshots, diagrams) are left as they are.
       transformations:
         jpeg: { format: webp, quality: 85, width: 2400, height: 2400 }
         heic: { format: webp, quality: 85, width: 2400, height: 2400 }
@@ -120,121 +121,11 @@ collections:
         modes: [raw, rich_text]
         hint: 'Callouts: `> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`. Uploaded images are stored next to the post.'
 
-  # ── Trade ideas ──────────────────────────────────────────────────────────────────────────
-  - name: trades
-    label: Trade ideas
-    label_singular: Trade idea
-    description: 'Lifecycle: watching → active → closed or stopped (invalidated if it never triggers). The site adds the not-financial-advice disclaimer.'
-    icon: candlestick_chart
-    folder: src/content/trades
-    path: '{{slug}}/index'
-    media_folder: ''
-    public_folder: ''
-    extension: md
-    format: yaml-frontmatter
-    slug:
-      template: '{{year}}-{{month}}-{{day}}-{{fields.ticker}}-{{fields.direction}}' # 2026-11-07-nvda-long
-      editable: [create]
-    preview_path: 'trades/{{slug}}/'
-    aliases_field: false
-    summary: '{{ticker | upper}} {{direction}} · {{setup}} · {{status}}'
-    sortable_fields:
-      fields: [published, ticker, status]
-      default: { field: published, direction: descending }
-    view_filters:
-      filters:
-        - { name: open, label: Open (watching or active), field: status, pattern: '^(watching|active)$' }
-        - { name: done, label: Finished, field: status, pattern: '^(closed|stopped|invalidated)$' }
-        - { name: drafts, label: Drafts, field: draft, pattern: true }
-    view_groups:
-      groups:
-        - { name: status, label: Status, field: status }
-        - { name: direction, label: Direction, field: direction }
-    fields:
-      - { name: title, label: Title, widget: string, maxlength: 140, hint: 'e.g. "NVDA: base breakout above 140".' }
-      - { name: summary, label: Summary, widget: text, maxlength: 300, hint: 'The thesis in one or two sentences.' }
-      - name: ticker
-        label: Ticker
-        widget: string
-        maxlength: 15
-        pattern: ['^[A-Za-z0-9.\-^=!]{1,15}$', 'Use 1–15 letters, digits or . - ^ = !']
-        hint: e.g. NVDA or BRK.B (shown in capitals).
-      - { name: exchange, label: Exchange, widget: select, options: [NASDAQ, NYSE, AMEX, CBOE, OTC, CRYPTO, OTHER], default: NASDAQ }
-      - name: tvSymbol
-        label: TradingView symbol
-        widget: string
-        required: false
-        hint: Only if EXCHANGE:TICKER isn't right for TradingView, e.g. `NYSE:BRK.B` or `BINANCE:BTCUSDT`.
-      - { name: direction, label: Direction, widget: select, options: [long, short] }
-      - name: setup
-        label: Setup
-        widget: select
-        options:
-          - Breakout
-          - Episodic pivot
-          - Pullback
-          - Base breakout
-          - Flag
-          - 'Gap & go'
-          - Parabolic short
-          - Range
-          - Earnings
-          - Reversal
-          - Other
-      - { name: timeframe, label: Timeframe, widget: select, options: [intraday, swing, position], default: swing }
-      - name: status
-        label: Status
-        widget: select
-        options: [watching, active, closed, stopped, invalidated]
-        default: watching
-        hint: 'watching → **active** once the entry fills → **closed** (exited) or **stopped**. **invalidated**: never triggered.'
-      - { name: published, label: Published, widget: datetime, type: date, default: '{{now}}' }
-      - { name: updated, label: Updated, widget: datetime, type: date, required: false }
-      - { name: entry, label: Entry, widget: number, value_type: float, min: 0, hint: "Per share, in the instrument's quote currency." }
-      - { name: stop, label: Stop, widget: number, value_type: float, min: 0, hint: 'Long → below the entry. Short → above it.' }
-      - name: targets
-        label: Targets
-        label_singular: Target
-        widget: list
-        min: 1
-        max: 5
-        field: { name: target, label: Target, widget: number, value_type: float, min: 0 }
-        hint: 1–5 prices, nearest first. Long → above the entry. Short → below it.
-      - name: triggered
-        label: Triggered
-        widget: datetime
-        type: date
-        required: false
-        hint: When the entry filled (watching → active). Stats use Published if this is empty.
-      - name: exit
-        label: Exit
-        widget: number
-        value_type: float
-        min: 0
-        required: false
-        hint: Average exit price. Required once the idea is closed or stopped (it sets the R result).
-      - { name: closed, label: Closed, widget: datetime, type: date, required: false }
-      - { name: conviction, label: Conviction, widget: number, value_type: int, min: 1, max: 5, required: false, hint: '1 (low) to 5 (high).' }
-      - { name: tags, label: Tags, widget: list, required: false }
-      - { name: chart, label: Chart image, widget: image, required: false, choose_url: false, hint: 'Chart screenshot, stored next to the idea.' }
-      - { name: chartAlt, label: Chart alt text, widget: string, required: false }
-      - name: updates
-        label: Updates
-        label_singular: Update
-        widget: list
-        required: false
-        summary: '{{fields.date}} · {{fields.note}}'
-        fields:
-          - { name: date, label: Date, widget: datetime, type: date, default: '{{now}}' }
-          - { name: note, label: Note, widget: text }
-      - { name: draft, label: Draft, widget: boolean, default: true, required: false, hint: 'Drafts are not built or listed anywhere.' }
-      - { name: body, label: Write-up, widget: markdown, modes: [raw, rich_text], hint: 'Thesis, plan, risks. Callouts: `> [!NOTE]`.' }
-
   # ── Notes ────────────────────────────────────────────────────────────────────────────────
   - name: notes
     label: Notes
     label_singular: Note
-    description: 'Short-form: market notes, TILs, links, a photo with a caption. The title is optional.'
+    description: 'Short-form: TILs, links, a photo with a caption. The title is optional.'
     icon: sticky_note_2
     folder: src/content/notes
     path: '{{slug}}/index'

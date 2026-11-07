@@ -1,8 +1,12 @@
 ---
-/** Full-screen numbered menu under the header, below 1024px (design spec §4.3). Driven by header.ts. */
+/**
+ * Full-screen numbered menu under the header, below 1024px (design spec §4.3). Driven by header.ts. The whole sheet
+ * is the "Menu" landmark, so its tools and links are inside it; while it is open the rest of the page is inert and
+ * Tab cycles through the header and the sheet.
+ */
 import Icon from '@/components/ui/Icon.astro';
 import ThemeToggle from '@/components/layout/ThemeToggle.astro';
-import { SITE, SOCIALS } from '@/data/site';
+import { HAS_PALETTE, SITE, SOCIALS } from '@/data/site';
 
 interface Props {
   items: { label: string; href: string; current: boolean }[];
@@ -12,19 +16,20 @@ const { items, homeCurrent } = Astro.props;
 const all = [{ label: 'Home', href: '/', current: homeCurrent }, ...items];
 ---
 
-<div class="mobile-menu" id="mobile-menu" hidden data-mobile-menu>
-  <nav aria-label="Menu">
-    <ol class="mobile-menu__list" role="list">
-      {all.map((item, i) => (
-        <li><a href={item.href} aria-current={item.current ? 'page' : undefined}><span>{String(i + 1).padStart(2, '0')}</span>{item.label}</a></li>
-      ))}
-    </ol>
-  </nav>
+<nav class="mobile-menu" id="mobile-menu" aria-label="Menu" hidden data-mobile-menu>
+  <ol class="mobile-menu__list" role="list">
+    {all.map((item, i) => (
+      <li><a href={item.href} aria-current={item.current ? 'page' : undefined}><span>{String(i + 1).padStart(2, '0')}</span>{item.label}</a></li>
+    ))}
+  </ol>
   <div class="mobile-menu__foot">
-    <div class="mobile-menu__tools">
-      <button class="btn mobile-menu__search" type="button" data-open-palette><Icon name="search" />Search</button>
-      <ThemeToggle class="mobile-menu__theme" />
-    </div>
+    {/* the theme toggle is always in the header, so this row only exists for Search */}
+    {HAS_PALETTE && (
+      <div class="mobile-menu__tools">
+        <button class="btn mobile-menu__search" type="button" data-open-palette><Icon name="search" />Search</button>
+        <ThemeToggle class="mobile-menu__theme" />
+      </div>
+    )}
     <p class="mobile-menu__links">
       {SOCIALS.map((s) => (
         <a class="ext-link" href={s.href} rel="me noopener">{s.label}<Icon name="arrow-up-right" /></a>
@@ -33,7 +38,7 @@ const all = [{ label: 'Home', href: '/', current: homeCurrent }, ...items];
     </p>
     <p class="label">{SITE.location}<span aria-hidden="true"> · </span><span class="clock" data-clock>UTC+08:00</span></p>
   </div>
-</div>
+</nav>
 
 <style>
   .mobile-menu {

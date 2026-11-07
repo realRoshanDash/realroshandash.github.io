@@ -7,7 +7,7 @@ interface Props {
 const { class: className } = Astro.props;
 ---
 
-<button class:list={['icon-btn', 'theme-toggle', className]} type="button" data-theme-toggle aria-label="Switch to light theme">
+<button class:list={['icon-btn', 'theme-toggle', className]} type="button" data-theme-toggle data-requires-js aria-label="Switch to light theme">
   <Icon name="theme" size={18} class="theme-toggle__icon" />
 </button>
 

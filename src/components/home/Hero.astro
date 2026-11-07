@@ -3,11 +3,12 @@
  * The hero: the Dash sandwich (design spec §4.11, geometry validated in Chromium and WebKit).
  * Everything derives from --F, the name's font size: the plate runs from the cap line of "Roshan" for 2F at the
  * photo's own ratio, so the dash — an en dash at Inter's real metrics, drawn as ::after of "Dash" — always crosses
- * it at 64% of the image height: the shoulder line, never the face. Layers share the .hero stacking context:
+ * it at 64% of the image height: the shoulder line, never the face. On desktop F is locked to the grid ("Roshan"
+ * fills cols 1–8) and the plate is exactly cols 9–12. Layers share the .hero stacking context:
  * backdrop (1) → name + dash (2) → cut-out (3) → frame edge, crop marks, caption (4).
  * The page renders in its final layout; only the dash, the crop marks and the grid draw in on a session's first view.
  */
-import { Picture } from 'astro:assets';
+import { getImage } from 'astro:assets';
 import Button from '@/components/ui/Button.astro';
 import cutout from '@/assets/portrait-cutout.png';
 import { SITE } from '@/data/site';
@@ -20,6 +21,19 @@ const { hasPosts } = Astro.props;
 const writing = linkTo('/blog/', '#writing');
 const contact = linkTo('/contact/', '#contact');
 const about = linkTo('/about/', '#about');
+
+// The portrait (spec §6.1, budgets §8.4: ≤ 60 KB on a 2x desktop, ≤ 15 KB on a phone). At its native 760w the
+// cut-out keeps fine grain that AVIF spends ~66 KB on at q60, so that one size is encoded at q45 (~28 KB). Phones
+// never need more than 570w (2.2x of their ~257px plate), so they get their own capped sources.
+const WIDTHS = [380, 570, 760] as const;
+const quality = (width: number) => (width > 570 ? 45 : 60);
+const variants = (format: 'avif' | 'webp') =>
+  Promise.all(WIDTHS.map((width) => getImage({ src: cutout, width, format, quality: quality(width) })));
+const [avif, webp] = await Promise.all([variants('avif'), variants('webp')]);
+const srcset = (images: { src: string }[], count = images.length) =>
+  images.slice(0, count).map((image, i) => `${image.src} ${WIDTHS[i]}w`).join(', ');
+const SIZES = '(min-width: 1024px) min(30.3vw, 451px), 46vw';
+const PHONE = '(max-width: 639px)';
 ---
 
 <section class="hero" aria-labelledby="hero-name">
@@ -37,27 +51,31 @@ const about = linkTo('/about/', '#about');
       <div class="plate__clip" data-plate>
         <div class="plate__frame">
           <div class="plate__backdrop"></div>
-          <Picture
-            src={cutout}
-            class="plate__img"
-            widths={[380, 570, 760]}
-            sizes="(min-width: 1024px) min(27.3vw, 451px), (min-width: 640px) 46vw, 66vw"
-            formats={['avif', 'webp']}
-            fallbackFormat="webp"
-            quality={60}
-            loading="eager"
-            fetchpriority="high"
-            decoding="async"
-            alt="Black-and-white portrait of Roshan Dash, head and shoulders, in a dark polo shirt."
-          />
+          <picture>
+            <source type="image/avif" media={PHONE} srcset={srcset(avif, 2)} sizes="66vw" />
+            <source type="image/avif" srcset={srcset(avif)} sizes={SIZES} />
+            <source type="image/webp" media={PHONE} srcset={srcset(webp, 2)} sizes="66vw" />
+            <img
+              class="plate__img"
+              src={webp[2].src}
+              srcset={srcset(webp)}
+              sizes={SIZES}
+              width={cutout.width}
+              height={cutout.height}
+              loading="eager"
+              fetchpriority="high"
+              decoding="async"
+              alt="Black-and-white portrait of Roshan Dash, head and shoulders, in a dark polo shirt."
+            />
+          </picture>
         </div>
       </div>
       <span class="crop crop--tl" aria-hidden="true"></span><span class="crop crop--tr" aria-hidden="true"></span>
       <span class="crop crop--bl" aria-hidden="true"></span><span class="crop crop--br" aria-hidden="true"></span>
-      <figcaption class="plate__cap label" id="fig-01">Fig. 01 — {SITE.name}, {SITE.location}</figcaption>
+      <figcaption class="plate__cap label" id="fig-01">Fig. 01 — {SITE.name}</figcaption>
     </figure>
     <div class="hero__intro">
-      <p class="t-lede hero__lede"><strong>Software engineer in {SITE.location}.</strong> I design and build backend systems, with AI agents in the loop from design to ship.</p>
+      <p class="t-lede hero__lede"><strong>Software engineer in {SITE.location}.</strong> I&nbsp;design and build backend systems, with AI agents in the loop from design to ship.</p>
       <div class="hero__cta">
         {hasPosts ? (
           <>
@@ -78,11 +96,19 @@ const about = linkTo('/about/', '#about');
 <style>
   .hero {
     position: relative; isolation: isolate; overflow-x: clip;
-    border-bottom: 1px solid var(--rule);
-    --F: clamp(120px, min(18.2vw, calc((100svh - 380px) / 1.68)), 300px);
+    container-type: inline-size;   /* 100cqi = the hero's width, without the scrollbar */
     --gap-name: clamp(32px, 4vw, 56px);
   }
-  .hero__grid { padding-bottom: clamp(32px, 3vw, 40px); }
+  /* --F, the name's font size, drives the whole sandwich. On desktop it is locked to the grid: "Roshan" is 3.0943F of
+     ink, so at F = (width of cols 1–8) / 3.0943 it fills cols 1–8 exactly, and the 2F-tall print (1.5016F wide) then
+     fills cols 9–12 to within a pixel. It turns height-bound on short screens so the CTAs stay in the first viewport,
+     and the plate keeps to cols 9–12 regardless (see the ≥1024px block). Defined here, not on .hero, because cqi
+     resolves against the nearest container *above* the element that uses it. */
+  .hero__grid {
+    --w8: calc((min(100cqi, var(--maxw)) - 2 * var(--margin)) * 2 / 3 - var(--gutter) / 3);
+    --F: clamp(120px, min(calc(var(--w8) / 3.0943), calc((100svh - 380px) / 1.68)), 300px);
+    padding-bottom: clamp(32px, 3vw, 40px);
+  }
 
   .hero__ruler {
     grid-column: 1 / -1; grid-row: 1;
@@ -136,7 +162,7 @@ const about = linkTo('/about/', '#about');
   /* native ratio; crops from the bottom when the plate is shorter */
   .plate__frame { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 760 / 1012; }
   .plate__backdrop { position: absolute; inset: 0; z-index: var(--z-plate-back); background: var(--portrait-backdrop); }
-  .plate__frame :global(.plate__img) {
+  .plate__img {
     position: absolute; inset: 0; z-index: var(--z-plate-front);
     width: 100%; height: 100%;
   }
@@ -146,37 +172,70 @@ const about = linkTo('/about/', '#about');
     border: 1px solid var(--plate-edge);
     pointer-events: none;
   }
-  .plate__cap { position: absolute; z-index: var(--z-plate-ornament); left: 0; top: calc(100% + 12px); white-space: nowrap; }
+  /* 32px below the print, clear of the crop marks (they reach 24px out) */
+  .plate__cap { position: absolute; z-index: var(--z-plate-ornament); left: 0; top: calc(100% + 32px); white-space: nowrap; }
 
   .crop { position: absolute; z-index: var(--z-plate-ornament); width: 16px; height: 16px; pointer-events: none; }
   .crop::before, .crop::after { content: ''; position: absolute; background: var(--fg-3); }
   .crop::before { left: 0; bottom: 0; width: 16px; height: 1px; }
   .crop::after { right: 0; top: 0; width: 1px; height: 16px; }
   .crop--tl { left: -24px; top: -24px; }
-  .crop--tr { right: -24px; top: -24px; transform: scaleX(-1); }
   .crop--bl { left: -24px; bottom: -24px; transform: scaleY(-1); }
-  .crop--br { right: -24px; bottom: -24px; transform: scale(-1, -1); }
+  /* the right-hand marks stay inside the page margin, whatever its width */
+  .crop--tr, .crop--br { right: calc(-1 * min(24px, var(--margin) - 6px)); }
+  .crop--tr { top: -24px; transform: scaleX(-1); }
+  .crop--br { bottom: -24px; transform: scale(-1, -1); }
 
   .hero__intro { grid-column: 1 / 8; grid-row: 4; padding-top: clamp(24px, 2.4vw, 32px); }
   .hero__lede { max-width: 34em; }
   .hero__cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 
+  @media (width >= 1024px) {
+    /* The plate is exactly cols 9–12 and 2F tall. The print keeps its native ratio and sits flush right, so the hard
+       crop of the cut-out (the shoulder leaving the frame) stays on the plate edge, and the studio light carries on
+       to the left wherever the plate is wider than the print (F capped, or height-bound on a short screen); the
+       cut-out's left arm fades out in the asset itself, so no cut shows there. The gradient is the token's own
+       ellipse, sized and placed in F from the right, so the tones behind the hair don't change. The bar still crosses
+       at 0.64 of the height: the shoulder line. */
+    .hero__plate { justify-self: stretch; aspect-ratio: auto; }
+    .plate__frame { left: auto; right: 0; width: calc(1.5016 * var(--F)); }
+    .plate__backdrop {
+      left: -200%;
+      background: radial-gradient(calc(1.2013 * var(--F)) calc(1.4 * var(--F)) at calc(100% - 0.8259 * var(--F)) calc(0.64 * var(--F)),
+        var(--portrait-backdrop-stops));
+    }
+    /* each CTA spans two of the intro's seven columns (it never shrinks below its label) */
+    .hero__cta {
+      display: grid; column-gap: var(--gutter);
+      grid-template-columns: repeat(2, minmax(calc((100% - 6 * var(--gutter)) / 7 * 2 + var(--gutter)), max-content));
+    }
+  }
   @media (width >= 1024px) and (height < 820px) { .hero__ruler { display: none; } }
+  /* 1366×768 laptops with browser chrome (≈657px tall): the meta row repeats the lede, so it goes too and F gets the room */
+  @media (width >= 1024px) and (height < 720px) {
+    .hero__meta { display: none; }
+    .hero__grid { --F: clamp(120px, min(calc(var(--w8) / 3.0943), calc((100svh - 300px) / 1.68)), 300px); }
+  }
 
-  /* tablet: stacked; plate beside the intro (bottom-aligned) */
+  /* tablet: stacked; plate beside the intro, both hanging from the same top line */
   @media (width < 1024px) {
-    .hero { --F: min(22vw, 200px); }
+    .hero__grid { --F: min(22vw, 200px); }
     .hero__name { grid-column: 1 / -1; }
     .hero__plate { grid-column: 5 / 9; grid-row: 4; margin-top: 24px; width: 100%; height: auto; }
-    .hero__intro { grid-column: 1 / 5; grid-row: 4; align-self: end; padding-top: 24px; }
+    .hero__intro { grid-column: 1 / 5; grid-row: 4; align-self: start; padding-top: 24px; }
     .hero__meta > div { grid-column: span 4; }
     .hero__meta > div:nth-child(n + 3) { display: none; }
     .hero__ruler li:nth-child(n + 9) { display: none; }
   }
+  /* room under the plate for the caption */
+  @media (640px <= width < 1024px) { .hero__grid { padding-bottom: 64px; } }
 
   /* phone: name → plate (cols 2–4, caption vertical in col 1) → lede → two CTAs, all inside 844px */
   @media (width < 640px) {
-    .hero { --F: min(26.6vw, 112px); --gap-name: 20px; }
+    .hero { --gap-name: 20px; }
+    .hero__grid { --F: min(26.6vw, 112px); }
+    /* a word too wide for the line (user text-spacing overrides) breaks instead of being clipped */
+    .hero__name { white-space: normal; overflow-wrap: anywhere; }
     .hero__ruler { display: none; }
     .hero__meta { margin-top: 0; }
     .hero__meta > div { grid-column: span 2; }
@@ -184,7 +243,7 @@ const about = linkTo('/about/', '#about');
     .hero__meta > div:nth-child(4) { display: flex; }
     .hero__meta dd { font-size: 14px; }
     .hero__plate {
-      --pw: calc(0.75 * (100vw - 2 * var(--margin)) - 0.25 * var(--gutter)); /* width of cols 2–4 */
+      --pw: calc(0.75 * (100cqi - 2 * var(--margin)) - 0.25 * var(--gutter)); /* width of cols 2–4 */
       grid-column: 2 / 5; grid-row: 4;
       margin-top: 20px;
       width: var(--pw);
@@ -194,15 +253,20 @@ const about = linkTo('/about/', '#about');
     .plate__cap {
       left: auto; top: auto; right: calc(100% + 10px); bottom: 0;
       writing-mode: vertical-rl; transform: rotate(180deg);
+      max-inline-size: 100%; overflow: hidden;   /* never taller than the plate */
     }
-    .crop--tr, .crop--br { display: none; }
+    .crop { display: none; }
     .hero__intro { grid-column: 1 / -1; grid-row: 5; padding-top: 16px; }
     .hero__lede { font-size: 16px; line-height: 1.45; }
-    .hero__cta { margin-top: 16px; flex-wrap: nowrap; }
+    /* side by side; they wrap only if their labels can't fit (e.g. with enlarged text spacing) */
+    .hero__cta { margin-top: 16px; }
     .hero__cta :global(.btn) { flex: 1 1 0; padding: 0 16px; }
   }
-</style>
+  @media (width < 360px) { .hero__cta :global(.btn) { gap: 8px; padding: 0 12px; } }
 
-<script>
-  import '@/scripts/clock.ts';
-</script>
+  /* Windows High Contrast and other forced palettes: no per-line backplate over the lede, and the dash stays visible */
+  @media (forced-colors: active) {
+    .hero__name { forced-color-adjust: none; color: CanvasText; }
+    .hero__name .line--dash::after { background: CanvasText; }
+  }
+</style>

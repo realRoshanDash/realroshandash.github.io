@@ -76,6 +76,8 @@ const {
     border: 1px solid var(--plate-edge);
     font: 13px/1.7 var(--font-mono, monospace);
   }
+  /* On a light page the band inverts to ink, almost the plate's own colour: a stronger edge keeps the print mounted */
+  :global(:root[data-theme='light'] .invert) .transcript { border-color: var(--rule-2); }
   .transcript__bar {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
     height: 42px; padding: 0 16px;

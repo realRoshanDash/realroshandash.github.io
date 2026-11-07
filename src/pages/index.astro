@@ -1,7 +1,9 @@
 ---
 /**
- * Home (design spec §5.1): Hero → 01 Profile → 02 Practice (inverted band) → 03 Writing → 04 Contact.
+ * Home (design spec §5.1): Hero → 01 About → 02 Practice (inverted band) → 03 Writing → 04 Contact.
  * Professional only: the verified facts in site.ts and the copy deck (spec §7), nothing personal beyond them.
+ * Each block has one job: About is the craft (AI is left to Practice), Practice is how agents fit in, the facts are
+ * the data, so no sentence repeats another.
  */
 import Base from '@/layouts/Base.astro';
 import Hero from '@/components/home/Hero.astro';
@@ -55,12 +57,12 @@ const person = {
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(person)} />
   <Hero hasPosts={posts.length > 0} />
 
-  <!-- 01 Profile -->
-  <section class="sec" id="about" aria-labelledby="profile-title">
+  <!-- 01 About (the nav's "About" and the hero's "About me" land here) -->
+  <section class="sec" id="about" aria-labelledby="about-title">
     <div class="wrap">
-      <SectionHead num="01" id="profile-title" title="Profile" desc="A short index of who I am and what I work on." link={aboutLink} />
+      <SectionHead num="01" id="about-title" title="About" desc="A short index of who I am and what I work on." link={aboutLink} />
       <div class="g profile">
-        <p class="t-statement profile__lead" data-reveal="0">I design and build backend systems. <span class="mute">Java, distributed systems, databases and system design&nbsp;— with AI agents and agentic workflows woven into how I design, build and ship.</span></p>
+        <p class="t-statement profile__lead" data-reveal="0">I design and build backend systems. <span class="mute">Java, distributed systems, databases and system design.</span></p>
         <Facts />
       </div>
     </div>
@@ -70,9 +72,9 @@ const person = {
   <section class="sec invert" id="practice" aria-labelledby="practice-title">
     <GridOverlay local />
     <div class="wrap band">
-      <SectionHead num="02" id="practice-title" title="Practice" desc="How I work: AI agents and agentic workflows, woven into every stage of building software." />
+      <SectionHead num="02" id="practice-title" title="Practice" desc="Agents in every stage of a change." />
       <div class="g practice">
-        <p class="t-statement practice__lead" data-reveal="0">AI agents are part of how I build. <span class="mute">Agentic workflows are woven into how I design, build and ship software.</span></p>
+        <p class="t-statement practice__lead" data-reveal="0">AI agents are part of how I build. <span class="mute">Agentic workflows are woven into how I design, build, review and ship software.</span></p>
         <Stages />
         <div class="practice__transcript"><AgentTranscript /></div>
       </div>
@@ -82,7 +84,7 @@ const person = {
   <!-- 03 Writing -->
   <section class="sec" id="writing" aria-labelledby="writing-title">
     <div class="wrap">
-      <SectionHead num="03" id="writing-title" title="Writing" desc="Long-form notes on backend systems, distributed systems, databases and building with AI agents." link={blogLink} rss="/rss.xml" />
+      <SectionHead num="03" id="writing-title" title="Writing" desc="Essays on the systems I build and the tools I build them with." link={blogLink} rss="/rss.xml" />
       {latest.length > 0 ? (
         <>
           <ol class="post-list" role="list">
@@ -98,18 +100,18 @@ const person = {
             <span class="c-no">No.</span><span class="c-date">Date</span><span class="c-title">Title</span><span class="c-tags">Tags</span><span class="c-min">Min</span>
           </div>
           <div class="empty__row">
-            <span class="c-no dash" aria-hidden="true">—</span>
-            <span class="c-date dash" aria-hidden="true">—</span>
-            <p class="c-title"><strong class="t-h3">Nothing published yet.</strong>{' '}<span>When posts land, they will be about backend systems, distributed systems, databases and building with AI agents.</span></p>
-            <span class="c-tags dash" aria-hidden="true">—</span>
-            <span class="c-min dash" aria-hidden="true">—</span>
+            <span class="c-no dash" aria-hidden="true">–</span>
+            <span class="c-date dash" aria-hidden="true">–</span>
+            <p class="c-title"><strong class="t-h3">Nothing published yet.</strong>{' '}<span>New posts will be listed here, newest first, and in the RSS feed.</span></p>
+            <span class="c-tags dash" aria-hidden="true">–</span>
+            <span class="c-min dash" aria-hidden="true">–</span>
           </div>
           <div class="empty__foot">
             <div class="empty__actions">
               <Button href="/rss.xml" icon="rss">Subscribe via RSS</Button>
               <Button variant="text" href="#contact">Get in touch</Button>
             </div>
-            <p class="label empty__note">In a table, an en dash means “no value”. For now.</p>
+            <p class="label empty__note">In a table, an en dash means “no value”. For&nbsp;now.</p>
           </div>
         </div>
       )}
@@ -119,9 +121,9 @@ const person = {
   <!-- 04 Contact -->
   <section class="sec" id="contact" aria-labelledby="contact-title">
     <div class="wrap">
-      <SectionHead num="04" id="contact-title" title="Contact" desc="My email is encrypted on this page. Your browser decrypts it after a short proof-of-work — about a second, no tracking." link={contactLink} />
+      <SectionHead num="04" id="contact-title" title="Contact" desc="My email is encrypted on this page. Your browser decrypts it after a short proof-of-work — about a second, no tracking." link={contactLink} />
       <div class="g contact">
-        <p class="t-statement contact__lead" data-reveal="0">Questions about backend systems, distributed systems or building with AI agents? <span class="mute">Write to me&nbsp;— the inbox is one small proof away.</span></p>
+        <p class="t-statement contact__lead" data-reveal="0">Questions, ideas or a system to talk through? <span class="mute">Write to me&nbsp;— the inbox is one small proof away.</span></p>
         <div class="contact__side" data-reveal="1"><ContactGate /></div>
       </div>
     </div>
@@ -129,7 +131,7 @@ const person = {
 </Base>
 
 <style>
-  /* 01 Profile */
+  /* 01 About (the profile statement and facts) */
   .profile { row-gap: var(--stack); }
   .profile__lead { grid-column: 3 / 12; }
 
@@ -161,7 +163,9 @@ const person = {
   .empty__row .c-title strong { color: var(--fg); }
   .empty__row .c-title span { max-width: 42em; font-size: 15px; line-height: 1.5; color: var(--fg-2); }
   .empty__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-top: 24px; }
-  .empty__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+  /* the button label and the text link share a baseline */
+  .empty__actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 20px; }
+  .empty__note { text-wrap: balance; }
 
   /* 04 Contact */
   .contact { row-gap: var(--stack); align-items: start; }
@@ -174,8 +178,11 @@ const person = {
     .c-tags, .c-min { display: none; }
   }
   @media (width < 640px) {
+    /* the statement says it on phones; the page stays inside its 5,500px budget */
+    #practice :global(.sec-head__aside) { display: none; }
     .empty__head { display: none; }
-    .empty__row { display: flex; flex-wrap: wrap; column-gap: 10px; row-gap: 10px; }
+    /* the header row (and its rule) is hidden, so the dash row brings its own top rule */
+    .empty__row { display: flex; flex-wrap: wrap; column-gap: 10px; row-gap: 10px; border-top: 1px solid var(--rule); }
     .empty__row .dash + .dash::before { content: '·'; margin-right: 10px; color: var(--fg-4); }
     .c-min { display: inline; }
     .empty__row .c-title { order: 1; flex: 1 0 100%; }

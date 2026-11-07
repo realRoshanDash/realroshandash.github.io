@@ -1,13 +1,14 @@
 ---
 /**
  * Site header (design spec §4.2): the dash + name, primary navigation (Writing, About, Contact; the brand links
- * home), the ⌘K search entry point, the theme toggle, and the numbered menu below 1024px.
- * Navigation points at a section's page once it is built, and at its section on the home page until then.
+ * home), the ⌘K search entry point (only once the palette ships: HAS_PALETTE), the theme toggle, and the numbered
+ * menu below 1024px. Navigation points at a section's page once it is built, and at its section on the home page
+ * until then. Without JavaScript the JS-only controls are hidden and "Menu" is a link to the footer index.
  */
 import Icon from '@/components/ui/Icon.astro';
 import ThemeToggle from '@/components/layout/ThemeToggle.astro';
 import MobileMenu from '@/components/layout/MobileMenu.astro';
-import { NAV, SITE } from '@/data/site';
+import { HAS_PALETTE, NAV, SITE } from '@/data/site';
 import { linkTo } from '@/lib/routes';
 
 interface Props {
@@ -32,11 +33,14 @@ const items = NAV.map((item) => {
       {items.map((item) => <a href={item.href} aria-current={item.current ? 'page' : undefined}>{item.label}</a>)}
     </nav>
     <div class="site-tools">
-      <button class="search-btn" type="button" data-open-palette aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
-        <Icon name="search" /><span class="search-btn__label">Search</span>{' '}<kbd data-kbd>Ctrl K</kbd>
-      </button>
+      {HAS_PALETTE && (
+        <button class="search-btn" type="button" data-open-palette data-requires-js aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+          <Icon name="search" /><span class="search-btn__label">Search</span>{' '}<kbd data-kbd>Ctrl K</kbd>
+        </button>
+      )}
       <ThemeToggle />
-      <button class="menu-btn" type="button" data-menu aria-expanded="false" aria-controls="mobile-menu">Menu</button>
+      <button class="menu-btn" type="button" data-menu data-requires-js aria-expanded="false" aria-controls="mobile-menu">Menu</button>
+      <a class="menu-btn" href="#footer-index" data-nojs-only>Menu</a>
     </div>
   </div>
   {progress && <span class="read-progress" aria-hidden="true"></span>}
@@ -132,6 +136,9 @@ const items = NAV.map((item) => {
     .site-tools { grid-column: 3 / 5; gap: 6px; }
   }
   :global(html.menu-open) { overflow: hidden; }
+  @media (forced-colors: active) {
+    .brand__dash { forced-color-adjust: none; background: CanvasText; }
+  }
 </style>
 
 <script>

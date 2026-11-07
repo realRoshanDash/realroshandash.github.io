@@ -25,7 +25,7 @@ shown after a quick proof-of-work captcha.
 nvm use            # Node 24, from .nvmrc
 npm ci
 npm run dev        # http://localhost:4321  (CMS: /admin/index.html)
-npm run build      # astro build, then the Pagefind index → dist/
+npm run build      # astro build, the Pagefind index → dist/, then the content guard
 npm run preview    # serve dist/
 npm test           # unit tests (node --test)
 npm run check      # astro check: types and content
@@ -136,6 +136,8 @@ no pages until the first entry is published.
 <summary><strong>Trade ideas (dormant): <code>src/content/trades/</code></strong></summary>
 
 Hidden on the site unless entries are published. Scaffold with `npm run new:trade -- TICKER long|short`.
+The CMS doesn't list them: `public/admin/config.yml` is served publicly, so the collection stays out
+of it (and the content guard below fails the build on trading words) until you decide to publish trades.
 Prices are per share, in the instrument's quote currency.
 
 | Field | Type | Notes |
@@ -219,6 +221,11 @@ git add src/data/contact.sealed.json && git commit -m "contact: update card" && 
 `public/.well-known/security.txt` expires after a year. CI starts warning 30 days before
 the date, so move `Expires` ahead when that happens.
 
+**Content guard.** `npm run build` ends with `scripts/content-guard.mjs`, which scans every text
+file in `dist/` and `public/` (HTML, feeds, YAML, JSON, JS…) and fails the build on trading or
+market words, the private project, a plaintext address on the domain, or a `mailto:` link in markup.
+Run it alone with `npm run guard`. To publish something it blocks, change its rules in the same commit.
+
 ## Repository layout
 
 ```text
@@ -227,7 +234,7 @@ src/content.config.ts   schemas for the collections
 src/data/site.ts        name, URL, socials, navigation
 src/pages/              routes (including robots.txt.ts and the RSS feeds)
 public/                 copied as-is: admin/ (CMS), .well-known/, old-URL redirects
-scripts/                new-entry.mjs (scaffolds), seal-contact.mjs (contact card)
+scripts/                new-entry.mjs (scaffolds), seal-contact.mjs (contact card), content-guard.mjs
 ```
 
 ## History
