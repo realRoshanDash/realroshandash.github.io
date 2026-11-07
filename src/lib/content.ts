@@ -6,7 +6,7 @@ import { getCollection, type CollectionEntry } from 'astro:content';
 import type { RSSFeedItem, RSSOptions } from '@astrojs/rss';
 import { SITE, TRADE_DISCLAIMER } from '../data/site.ts';
 import { formatDate } from './format.ts';
-import { escapeHtml, excerpt, markdownToPlain, slugify } from './text.ts';
+import { escapeHtml, excerpt, markdownToFeedHtml, slugify } from './text.ts';
 import { compareTrades, tradeSynopsis } from './trades.ts';
 
 /** Drafts show in `astro dev` and in builds run with SHOW_DRAFTS=1 (design/QA previews), never otherwise. */
@@ -189,16 +189,13 @@ export function tradeFeedItem(trade: Trade): FeedItem {
 
 /**
  * Notes are short, so the feed carries their full text: plain text, one <p> per paragraph, then the link. Code
- * blocks are kept, and links read "text (url)" with relative URLs made absolute, since a feed reader has no page
- * to resolve them against.
+ * blocks are kept as <pre><code> with their line breaks, and links read "text (url)" with relative URLs made
+ * absolute, since a feed reader has no page to resolve them against.
  */
 export function noteFeedItem(note: Note): FeedItem {
   const body = note.body ?? '';
   const url = absoluteUrl(entryPath('notes', note.id));
-  const html = markdownToPlain(body, { keepCode: true, linkUrls: true, baseUrl: url })
-    .split('\n\n')
-    .filter(Boolean)
-    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`);
+  const html = [markdownToFeedHtml(body, { linkUrls: true, baseUrl: url })];
   const { link } = note.data;
   if (link) html.push(`<p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>`);
   return {

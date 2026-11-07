@@ -4,10 +4,12 @@
  * time, and the name as a wordmark fitted to the content width in pure CSS (100cqi / its measured ink width).
  */
 import Icon from '@/components/ui/Icon.astro';
-import { NAV, SITE, SOCIALS } from '@/data/site';
+import { SITE, SOCIALS } from '@/data/site';
+import { getNav } from '@/lib/nav';
 import { linkTo } from '@/lib/routes';
 
 const year = new Date().getFullYear();
+const nav = await getNav('footer');
 ---
 
 <footer class="site-footer">
@@ -20,7 +22,7 @@ const year = new Date().getFullYear();
       <nav class="site-footer__col site-footer__index" id="footer-index" aria-label="Footer">
         <span class="label">Index</span>
         <a href="/">Home</a>
-        {NAV.map((item) => <a href={linkTo(item.href, item.anchor)}>{item.label}</a>)}
+        {nav.map((item) => <a href={linkTo(item.href, item.anchor)}>{item.label}</a>)}
       </nav>
       <div class="site-footer__col site-footer__elsewhere">
         <span class="label">Elsewhere</span>

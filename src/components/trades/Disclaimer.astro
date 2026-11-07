@@ -1,0 +1,24 @@
+---
+/**
+ * The trade-ideas disclaimer, verbatim (TRADE_DISCLAIMER, copy deck §7.5). Every trade page carries it above the
+ * fold and again at the foot of the page (§4.21).
+ */
+import { TRADE_DISCLAIMER } from '@/data/site';
+
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<p class:list={['disclaimer', className]} role="note"><span class="label">Note</span><span>{TRADE_DISCLAIMER}</span></p>
+
+<style>
+  .disclaimer {
+    display: flex; gap: 14px;
+    max-width: 48em; padding-top: 14px;
+    border-top: 1px solid var(--rule);
+    font-size: 13px; line-height: 1.55; color: var(--fg-2);
+  }
+  .disclaimer .label { flex: none; padding-top: 1px; color: var(--fg); }
+</style>

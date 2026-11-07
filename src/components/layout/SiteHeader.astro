@@ -8,7 +8,8 @@
 import Icon from '@/components/ui/Icon.astro';
 import ThemeToggle from '@/components/layout/ThemeToggle.astro';
 import MobileMenu from '@/components/layout/MobileMenu.astro';
-import { HAS_PALETTE, NAV, SITE } from '@/data/site';
+import { HAS_PALETTE, SITE } from '@/data/site';
+import { getNav } from '@/lib/nav';
 import { linkTo } from '@/lib/routes';
 
 interface Props {
@@ -18,7 +19,7 @@ interface Props {
 const { progress = false } = Astro.props;
 
 const path = Astro.url.pathname.replace(/\/?$/, '/');
-const items = NAV.map((item) => {
+const items = (await getNav('header')).map((item) => {
   const href = linkTo(item.href, item.anchor);
   return { label: item.label, href, current: href === item.href && path.startsWith(item.href) };
 });

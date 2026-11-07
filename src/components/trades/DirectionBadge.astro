@@ -1,0 +1,28 @@
+---
+/** Long or short (design spec §4.21): the word carries it; the arrow (up-right / down-right) echoes it. */
+import Icon from '@/components/ui/Icon.astro';
+import type { TradeDirection } from '@/lib/trades';
+
+interface Props {
+  direction: TradeDirection;
+  class?: string;
+}
+const { direction, class: className } = Astro.props;
+---
+
+<span class:list={['dir', `dir--${direction}`, className]}>
+  {direction === 'long' ? 'Long' : 'Short'}<Icon name={direction === 'long' ? 'arrow-up-right' : 'arrow-down-right'} />
+</span>
+
+<style>
+  .dir {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 28px; padding: 0 10px;
+    border: 1px solid var(--fg);
+    font-size: 12px; font-weight: 650; letter-spacing: 0.07em; line-height: 1; text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .dir :global(.icon) { width: 12px; height: 12px; stroke-width: 1.75; }
+  .dir--long { background: var(--fg); color: var(--bg); }
+  .dir--short { color: var(--fg); }
+</style>

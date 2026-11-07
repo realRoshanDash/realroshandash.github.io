@@ -1,0 +1,186 @@
+---
+/**
+ * /trades/<id>/ — one trade idea (dormant: built only for published ideas; design spec §4.21, §5.6).
+ * Head: crumb, giant ticker, symbol and setup, direction and status, the thesis, the disclaimer; the price ladder
+ * beside it. Then this idea's figures, the write-up with the chart facade beside it, the update log, and the
+ * disclaimer again at the foot.
+ */
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import Base from '@/layouts/Base.astro';
+import Icon from '@/components/ui/Icon.astro';
+import StatusPill from '@/components/trades/StatusPill.astro';
+import DirectionBadge from '@/components/trades/DirectionBadge.astro';
+import PriceLadder from '@/components/trades/PriceLadder.astro';
+import StatsRow from '@/components/trades/StatsRow.astro';
+import UpdateLog from '@/components/trades/UpdateLog.astro';
+import ChartFacade from '@/components/trades/ChartFacade.astro';
+import Disclaimer from '@/components/trades/Disclaimer.astro';
+import Prose from '@/components/notes/Prose.astro';
+import { ideaCells, titleCase } from '@/components/trades/model';
+import { SITE } from '@/data/site';
+import { adjacent, entryPath, getTrades } from '@/lib/content';
+import { formatDateISO, formatPrice } from '@/lib/format';
+import { lsbStyle } from '@/lib/optical';
+import { resultR, riskPerShare, tvSymbol } from '@/lib/trades';
+import { truncate } from '@/lib/text';
+
+export const getStaticPaths = (async () => {
+  const trades = await getTrades();
+  return trades.map((trade) => ({ params: { id: trade.id }, props: { trade, trades } }));
+}) satisfies GetStaticPaths;
+
+const { trade, trades } = Astro.props;
+const t = trade.data;
+const { Content } = await render(trade);
+const iso = formatDateISO(t.published);
+// "No. 001" is the oldest idea (getTrades is newest first).
+const no = trades.length - trades.findIndex((other) => other.id === trade.id);
+const { prev: older, next: newer } = adjacent(trades, trade.id);
+const symbol = tvSymbol(t);
+// The giant ticker fits its column whatever its length (Inter Bold caps ≈ 0.7em each, tracking included), and its
+// first glyph's ink sits on the column line (precomputed side bearing, spec §2.3.5).
+const tickerStyle = [`--chars:${Math.max(3, t.ticker.length)}`, lsbStyle(t.ticker)].filter(Boolean).join(';');
+---
+
+<Base title={t.title} description={truncate(t.summary, 200)} type="article">
+  <link slot="head" rel="alternate" type="application/rss+xml" title={`Trade ideas — ${SITE.name}`} href="/trades/rss.xml" />
+  <article class="wrap td" aria-labelledby="td-title" data-pagefind-body data-pagefind-meta="title[data-title]" data-title={t.title}>
+    <header class="td-head g">
+      <div class="td-crumb">
+        <p class="label" data-pagefind-ignore>
+          <a href="/trades/">Trade ideas</a><span aria-hidden="true">/</span><span>No. {String(no).padStart(3, '0')}</span><span aria-hidden="true">/</span><span>Logged <time datetime={iso}>{iso}</time></span>
+        </p>
+        {t.draft && <span class="badge"><span class="badge__hatch" aria-hidden="true"></span>Draft</span>}
+      </div>
+
+      <div class="td-id">
+        <h1 class="td-ticker" id="td-title" style={tickerStyle}><span aria-hidden="true">{t.ticker}</span><span class="sr-only">{t.title}</span></h1>
+        <p class="td-sub"><span class="mono">{symbol}</span><span aria-hidden="true"> · </span>{t.setup}<span aria-hidden="true"> · </span>{titleCase(t.timeframe)}</p>
+        <div class="td-chips">
+          <DirectionBadge direction={t.direction} />
+          <StatusPill status={t.status} result={resultR(t)} />
+        </div>
+        <p class="t-lede td-thesis">{t.summary}</p>
+        <Disclaimer />
+      </div>
+
+      <div class="td-ladder">
+        <PriceLadder trade={t} id="td-ladder" />
+      </div>
+    </header>
+
+    <section class="td-figures" aria-labelledby="td-figures-title">
+      <div class="block-head">
+        <h2 class="label block-head__title" id="td-figures-title">This idea</h2>
+        <span class="label">1R = {formatPrice(riskPerShare(t))} per share</span>
+      </div>
+      <StatsRow cells={ideaCells(t)} />
+    </section>
+
+    <div class="td-main g">
+      <div class="td-story">
+        <Prose span={8}><Content /></Prose>
+        <UpdateLog trade={t} id="td-log" />
+      </div>
+      <aside class="td-aside" aria-label="Chart" data-pagefind-ignore>
+        <ChartFacade symbol={symbol} chart={t.chart} chartAlt={t.chartAlt} id="td-chart" />
+      </aside>
+    </div>
+
+    <footer class="td-foot" data-pagefind-ignore>
+      <Disclaimer />
+      <nav class="pager g" aria-label="More trade ideas">
+        {older && (
+          <a class="pager__link pager__link--older" href={entryPath('trades', older.id)}>
+            <span class="label"><Icon name="arrow-right" />Older idea</span>
+            <span class="pager__title">{older.data.ticker} · {older.data.setup}</span>
+            <span class="label pager__date">{formatDateISO(older.data.published)}</span>
+          </a>
+        )}
+        {newer && (
+          <a class="pager__link pager__link--newer" href={entryPath('trades', newer.id)}>
+            <span class="label">Newer idea<Icon name="arrow-right" /></span>
+            <span class="pager__title">{newer.data.ticker} · {newer.data.setup}</span>
+            <span class="label pager__date">{formatDateISO(newer.data.published)}</span>
+          </a>
+        )}
+        <a class="route-link pager__all" href="/trades/">
+          <span class="route">/trades</span><span class="leader" aria-hidden="true"></span><span class="text">All trade ideas<Icon name="arrow-right" /></span>
+        </a>
+      </nav>
+    </footer>
+  </article>
+</Base>
+
+<style>
+  .td { padding-bottom: var(--section-pad); }
+
+  .td-head { row-gap: 28px; align-items: start; padding-block: clamp(28px, 4vw, 64px) clamp(40px, 5vw, 72px); }
+  .td-crumb { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .td-crumb .label { display: flex; flex-wrap: wrap; gap: 0 10px; }
+  .td-crumb a { color: var(--fg-2); transition: color var(--dur-2) linear; }
+  .td-crumb a:hover { color: var(--fg); }
+
+  .td-id { grid-column: 1 / 8; container-type: inline-size; display: flex; flex-direction: column; align-items: flex-start; gap: 22px; }
+  .td-ticker {
+    margin-left: calc(-1em * var(--lsb, 0));
+    font-size: min(clamp(96px, 14vw, 224px), calc(100cqi / (var(--chars) * 0.7)));
+    line-height: 0.8; font-weight: 700; letter-spacing: -0.055em; white-space: nowrap;
+    font-variation-settings: var(--opsz-display);
+  }
+  .td-sub { margin-top: -6px; font-size: 15px; line-height: 1.45; color: var(--fg-2); }
+  .td-sub .mono { color: var(--fg); letter-spacing: 0.02em; }
+  .td-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .td-thesis { max-width: 32em; color: var(--fg); }
+  .td-id :global(.disclaimer) { align-self: stretch; }
+
+  .td-ladder { grid-column: 8 / 13; }
+
+  .block-head {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px;
+    padding-top: 14px; margin-bottom: 14px; border-top: 1px solid var(--rule-2);
+  }
+  .block-head__title { color: var(--fg); white-space: nowrap; }
+  .td-figures { margin-bottom: clamp(48px, 6vw, 96px); }
+
+  .td-main { row-gap: 48px; align-items: start; }
+  .td-story { grid-column: 1 / 9; display: grid; gap: clamp(48px, 6vw, 80px); min-width: 0; }
+  .td-aside { grid-column: 9 / 13; position: sticky; top: calc(var(--nav-h) + 24px); }
+
+  .td-foot { margin-top: clamp(48px, 6vw, 96px); display: grid; gap: clamp(40px, 5vw, 64px); }
+
+  .pager { row-gap: 16px; padding-top: 18px; border-top: 1px solid var(--rule-2); }
+  .pager__link { display: flex; flex-direction: column; gap: 8px; padding: 6px 0 4px; }
+  .pager__link--older { grid-column: 1 / 7; }
+  .pager__link--newer { grid-column: 7 / 13; align-items: flex-end; text-align: right; }
+  .pager__link .label { display: inline-flex; align-items: center; gap: 8px; }
+  .pager__link--older .label :global(.icon) { transform: scaleX(-1); }
+  .pager__link :global(.icon) { width: 14px; height: 14px; }
+  .pager__title { font-size: var(--fs-h3); line-height: 1.15; font-weight: 650; letter-spacing: var(--tr-heading); }
+  .pager__link:hover .pager__title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+  .pager__date { color: var(--fg-3); }
+  .pager__all { grid-column: 1 / -1; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--rule); }
+  .route-link { display: flex; align-items: baseline; gap: 10px; min-height: 32px; }
+  .route-link .route { font: 12.5px var(--font-mono, monospace); color: var(--fg-3); transition: color var(--dur-2) linear; }
+  .route-link .leader {
+    flex: 1; min-width: 24px; height: 1px; align-self: center;
+    background: repeating-linear-gradient(90deg, var(--rule-2) 0 1px, transparent 1px 5px);
+  }
+  .route-link .text { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 550; }
+  .route-link .text :global(.icon) { transition: transform var(--dur-4) var(--ease-out); }
+  .route-link:hover .route { color: var(--signal-text); }
+  .route-link:hover .text :global(.icon), .route-link:focus-visible .text :global(.icon) { transform: translateX(4px); }
+
+  @media (width < 1024px) {
+    .td-id, .td-ladder, .td-story, .td-aside { grid-column: 1 / -1; }
+    .td-ladder { max-width: 560px; width: 100%; }
+    .td-aside { position: static; }
+    .pager__link--older { grid-column: 1 / 5; }
+    .pager__link--newer { grid-column: 5 / 9; }
+  }
+  @media (width < 640px) {
+    .td-ladder { max-width: none; }
+    .pager__link--older, .pager__link--newer { grid-column: 1 / -1; align-items: flex-start; text-align: left; }
+  }
+</style>

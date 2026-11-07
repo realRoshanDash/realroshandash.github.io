@@ -1,0 +1,118 @@
+---
+/**
+ * The long-form text of a note or a trade idea, set like a post's prose (design spec §4.17): a margin column for
+ * hanging section numbers, running text at the measure, en-dash bullets, and NOTE / TIP / WARNING callouts.
+ * Used by /notes/<id>/ and /trades/<id>/.
+ *
+ * It wraps `.prose`, so it takes whatever src/styles/prose.css provides. The rules below repeat the spec's own
+ * values, scoped to `.dprose`, so the text reads the same whether or not the shared prose sheet has them yet.
+ * `span` is how many page columns the block covers (default: all of them); the margin column is two of them on
+ * desktop, one on tablets, none on phones.
+ */
+interface Props {
+  span?: number;
+  class?: string;
+}
+const { span, class: className } = Astro.props;
+---
+
+<div class:list={['dprose', className]} style={span ? `--span:${span}` : undefined}>
+  <div class="prose"><slot /></div>
+</div>
+
+<style is:global>
+  .dprose {
+    --span: var(--cols);
+    --col: calc((100cqi - (var(--span) - 1) * var(--gutter)) / var(--span));
+    --hang: calc(2 * var(--col) + 2 * var(--gutter));
+    container-type: inline-size;
+    min-width: 0;
+  }
+  @media (width < 1024px) { .dprose { --hang: calc(var(--col) + var(--gutter)); } }
+  @media (width < 640px) { .dprose { --hang: 0px; } }
+
+  .dprose .prose { max-width: none; color: var(--fg); counter-reset: h2; }
+  .dprose .prose > * { margin-left: var(--hang); max-width: var(--measure); }
+  .dprose .prose > * + * { margin-top: 0; }
+  .dprose .prose p {
+    margin-block: 0 1.1em;
+    font-size: var(--fs-prose); line-height: var(--lh-prose); letter-spacing: var(--tr-prose);
+  }
+  .dprose .prose > :last-child { margin-bottom: 0; }
+
+  /* h2: hanging number in the margin column, a rule spanning margin and text */
+  .dprose .prose h2 {
+    position: relative; max-width: none;
+    margin: 64px 0 18px var(--hang); padding-top: 16px;
+    font-size: var(--fs-h2); line-height: var(--lh-heading); letter-spacing: var(--tr-h2); font-weight: 650;
+    counter-increment: h2; counter-reset: h3;
+  }
+  .dprose .prose h2::before {
+    content: counter(h2); position: absolute; top: 16px; left: calc(-1 * var(--hang));
+    font-weight: 250; color: var(--fg-3); font-variant-numeric: tabular-nums;
+  }
+  .dprose .prose h2::after {
+    content: ''; position: absolute; top: 0; left: calc(-1 * var(--hang)); right: 0;
+    height: 1px; background: var(--rule-2);
+  }
+  .dprose .prose > h2:first-child { margin-top: 0; }
+  .dprose .prose h3 {
+    display: flex; gap: 14px; align-items: baseline; margin-block: 36px 12px;
+    font-size: var(--fs-h3); line-height: 1.2; letter-spacing: var(--tr-heading); font-weight: 650;
+    counter-increment: h3;
+  }
+  .dprose .prose h3::before {
+    content: counter(h2) '.' counter(h3);
+    font-size: 13px; font-weight: 500; letter-spacing: 0.04em; color: var(--fg-3); font-variant-numeric: tabular-nums;
+  }
+  @media (width < 640px) {
+    .dprose .prose h2::before {
+      position: static; display: block; margin-bottom: 8px;
+      font-size: 12px; font-weight: 500; letter-spacing: 0.08em;
+    }
+  }
+
+  /* lists: the en dash is the bullet */
+  .dprose .prose :is(ul, ol) {
+    margin-block: 0 1.2em; padding-left: 1.6em;
+    font-size: var(--fs-prose); line-height: var(--lh-prose); letter-spacing: var(--tr-prose);
+  }
+  .dprose .prose li { margin-block: 0.3em; padding-left: 0.2em; }
+  .dprose .prose li + li { margin-top: 0.3em; }
+  .dprose .prose ul > li { list-style: none; position: relative; }
+  .dprose .prose ul > li::before { content: '–'; position: absolute; left: -1.1em; color: var(--fg-3); }
+  .dprose .prose ol > li::marker { color: var(--fg-3); font-variant-numeric: tabular-nums; font-weight: 500; }
+
+  .dprose .prose hr { border: 0; width: 24px; height: var(--signal-bar); background: var(--signal); margin: 56px 0 56px var(--hang); }
+  .dprose .prose blockquote:not(.pull) {
+    margin: 28px 0 28px var(--hang); padding-left: 20px;
+    border-left: 2px solid var(--rule-2); color: var(--fg-2);
+  }
+  .dprose .prose > .expressive-code { margin: 14px 0 28px var(--hang); max-width: none; }
+  .dprose .prose > :is(img, picture, figure) { margin-block: 18px 34px; }
+
+  /* callouts: > [!NOTE], > [!TIP], > [!WARNING] (IMPORTANT reads as a note, CAUTION as a warning) */
+  .dprose .prose .callout {
+    display: grid; grid-template-columns: auto 1fr; gap: 6px 16px;
+    margin: 6px 0 30px var(--hang); max-width: var(--measure);
+    padding: 18px 20px 18px 18px;
+    background: var(--bg-raised); border: 1px solid var(--rule); border-left: var(--signal-bar) solid var(--signal-ui);
+  }
+  .dprose .prose .callout-title {
+    display: flex; align-items: center; gap: 8px; padding-top: 4px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.08em; line-height: 1.35; text-transform: uppercase; color: var(--fg);
+  }
+  .dprose .prose .callout-title-icon { display: none; }
+  .dprose .prose .callout-title::before { content: ''; flex: none; width: 8px; height: 8px; background: var(--signal-ui); }
+  .dprose .prose .callout-content > :last-child { margin-bottom: 0; }
+  .dprose .prose .callout-content p { font-size: 16px; line-height: 1.6; color: var(--fg-2); }
+  .dprose .prose .callout[data-callout='tip'] { border-left-color: var(--fg); }
+  .dprose .prose .callout[data-callout='tip'] .callout-title::before { background: none; border: 1.5px solid var(--fg); width: 9px; height: 9px; }
+  .dprose .prose .callout[data-callout='important'] .callout-title::before { background: var(--fg); }
+  .dprose .prose :is(.callout[data-callout='warning'], .callout[data-callout='caution']) { background: var(--signal-wash); }
+  .dprose .prose :is(.callout[data-callout='warning'], .callout[data-callout='caution']) .callout-title::before {
+    width: 10px; height: 9px; clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  }
+  .dprose .prose :is(.callout[data-callout='warning'], .callout[data-callout='caution']) .callout-content p { color: var(--fg); }
+  @media (width < 640px) { .dprose .prose .callout { grid-template-columns: 1fr; } }
+</style>

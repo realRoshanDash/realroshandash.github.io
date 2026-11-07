@@ -1,0 +1,56 @@
+---
+/**
+ * Where a trade idea stands (design spec §4.21). The word always states the status; the mark only echoes it,
+ * so colour is never the only cue. Closed and stopped ideas carry their result in R.
+ */
+import Icon from '@/components/ui/Icon.astro';
+import { formatR } from '@/lib/format';
+import type { TradeStatus } from '@/lib/trades';
+
+interface Props {
+  status: TradeStatus;
+  /** Realised R, shown for closed and stopped ideas. */
+  result?: number | null;
+  class?: string;
+}
+const { status, result = null, class: className } = Astro.props;
+const LABELS: Record<TradeStatus, string> = {
+  watching: 'Watching',
+  active: 'Active',
+  closed: 'Closed',
+  stopped: 'Stopped',
+  invalidated: 'Invalidated',
+};
+const showResult = result !== null && (status === 'closed' || status === 'stopped');
+---
+
+<span class:list={['pill', `pill--${status}`, className]}>
+  {status === 'stopped' ? <Icon name="close" class="pill__x" /> : <span class="pill__mark" aria-hidden="true"></span>}
+  <span>{LABELS[status]}{showResult && <span class="pill__r">{formatR(result)}</span>}</span>
+</span>
+
+<style>
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 24px; padding: 0 9px;
+    border: 1px solid var(--rule-2);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.07em; line-height: 1; text-transform: uppercase;
+    color: var(--fg); white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  .pill__mark { flex: none; width: 7px; height: 7px; border-radius: var(--radius-dot); }
+  .pill__r { margin-left: 0.5em; }
+
+  .pill--watching .pill__mark { border: 1.5px solid var(--fg-2); }
+
+  .pill--active { border-color: var(--signal-ui); }
+  .pill--active .pill__mark { background: var(--signal-ui); }
+
+  .pill--closed { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+  .pill--closed .pill__mark { width: 6px; height: 6px; border-radius: 0; background: var(--bg); }
+
+  .pill--stopped { border-color: var(--fg); }
+  .pill :global(.pill__x) { width: 10px; height: 10px; color: var(--loss); stroke-width: 2; }
+
+  .pill--invalidated { border-style: dashed; color: var(--fg-3); }
+  .pill--invalidated .pill__mark { width: 8px; height: 8px; border: 1.5px dotted var(--fg-3); }
+</style>

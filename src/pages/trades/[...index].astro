@@ -1,0 +1,162 @@
+---
+/**
+ * /trades/ — trade ideas (dormant: design spec §4.21, §5.5). Never linked from the header, the hero or Home;
+ * reachable from the footer index (src/lib/nav.ts), the sitemap and its feed once something is published.
+ *
+ * A rest route instead of index.astro so the page can be absent: getStaticPaths yields /trades/ only while at
+ * least one idea is published, so until then the build has no page, no nav item, no sitemap entry and no feed.
+ */
+import type { GetStaticPaths } from 'astro';
+import Base from '@/layouts/Base.astro';
+import Icon from '@/components/ui/Icon.astro';
+import TradeCard from '@/components/trades/TradeCard.astro';
+import StatsRow from '@/components/trades/StatsRow.astro';
+import Disclaimer from '@/components/trades/Disclaimer.astro';
+import { trackRecordCells } from '@/components/trades/model';
+import { SITE } from '@/data/site';
+import { getTrades } from '@/lib/content';
+import { pluralize } from '@/lib/format';
+import { lsbStyle } from '@/lib/optical';
+import type { TradeStatus } from '@/lib/trades';
+
+export const getStaticPaths = (async () => {
+  const trades = await getTrades({ sort: 'status' });
+  return trades.length ? [{ params: { index: undefined }, props: { trades } }] : [];
+}) satisfies GetStaticPaths;
+
+const { trades } = Astro.props;
+// "No. 001" is the oldest idea, like posts.
+const byAge = [...trades].sort((a, b) => a.data.published.getTime() - b.data.published.getTime() || a.id.localeCompare(b.id));
+const numberOf = (id: string) => byAge.findIndex((trade) => trade.id === id) + 1;
+// Filter buttons in lifecycle order; "All" first and pressed.
+const FILTERS: { status: TradeStatus | 'all'; label: string }[] = [
+  { status: 'all', label: 'All' },
+  { status: 'watching', label: 'Watching' },
+  { status: 'active', label: 'Active' },
+  { status: 'closed', label: 'Closed' },
+  { status: 'stopped', label: 'Stopped' },
+  { status: 'invalidated', label: 'Invalidated' },
+];
+const countOf = (status: TradeStatus | 'all') =>
+  status === 'all' ? trades.length : trades.filter((trade) => trade.data.status === status).length;
+const description = 'Personal notes on US-equity setups: entry, stop and targets logged in advance, scored in R once closed.';
+---
+
+<Base title="Trade ideas" description={description}>
+  <link slot="head" rel="alternate" type="application/rss+xml" title={`Trade ideas — ${SITE.name}`} href="/trades/rss.xml" />
+  <div class="wrap">
+    <header class="ph g">
+      <div class="ph__main">
+        <p class="ph__route mono">/trades</p>
+        <h1 class="ph__title t-page" style={lsbStyle('Trade ideas')}>Trade ideas</h1>
+      </div>
+      <div class="ph__aside">
+        <p class="ph__desc">{description}</p>
+        <Disclaimer />
+        <a class="arrow-link" href="/trades/rss.xml">RSS feed<Icon name="rss" /></a>
+      </div>
+    </header>
+
+    <section class="record" aria-labelledby="record-title">
+      <div class="block-head">
+        <h2 class="label block-head__title" id="record-title">Track record</h2>
+        <span class="label">Closed and stopped ideas, in R</span>
+      </div>
+      <StatsRow cells={trackRecordCells(trades.map((t) => t.data))} />
+    </section>
+
+    <section class="ideas" aria-labelledby="ideas-title" data-trade-filter>
+      <div class="block-head">
+        <h2 class="label block-head__title" id="ideas-title">Ideas</h2>
+        <p class="label" data-filter-count aria-live="polite">{pluralize(trades.length, 'idea')}</p>
+      </div>
+      <div class="filter" role="group" aria-label="Show ideas by status" data-requires-js>
+        {FILTERS.map(({ status, label }) => (
+          <button class="chip filter__chip" type="button" aria-pressed={status === 'all' ? 'true' : 'false'} data-filter={status}>
+            {label}<span class="count">{countOf(status)}</span>
+          </button>
+        ))}
+      </div>
+      <ul class="cards" role="list">
+        {trades.map((trade, i) => <TradeCard trade={trade} no={numberOf(trade.id)} level={3} reveal={i % 3} />)}
+      </ul>
+      <p class="ideas__empty" data-filter-empty hidden></p>
+    </section>
+
+    <footer class="page-foot">
+      <Disclaimer />
+    </footer>
+  </div>
+</Base>
+
+<style>
+  .ph { row-gap: 28px; align-items: end; padding-block: clamp(28px, 4vw, 64px) clamp(36px, 4.5vw, 64px); }
+  .ph__main { grid-column: 1 / 9; display: grid; gap: clamp(12px, 1.6vw, 24px); }
+  .ph__route { color: var(--fg-3); }
+  .ph__aside { grid-column: 9 / 13; display: grid; justify-items: start; gap: 16px; padding-bottom: 8px; }
+  .ph__desc { max-width: 30em; font-size: 15px; line-height: 1.5; color: var(--fg-2); }
+
+  .block-head {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px;
+    padding-top: 14px; margin-bottom: 14px; border-top: 1px solid var(--rule-2);
+  }
+  .block-head__title { color: var(--fg); white-space: nowrap; }
+  .record { margin-bottom: var(--stack); }
+
+  .filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+  .filter__chip .count { font-size: 12px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  .filter__chip[aria-pressed='true'] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+  .filter__chip[aria-pressed='true'] .count { color: var(--bg); opacity: 0.7; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(32px, 3.5vw, 48px) var(--gutter); }
+  .ideas__empty { padding: 20px 0 24px; border-top: 1px solid var(--rule); font-size: 16px; color: var(--fg-2); }
+
+  .page-foot { padding: clamp(48px, 6vw, 96px) 0 var(--section-pad); }
+
+  @media (width < 1024px) {
+    .ph__main { grid-column: 1 / -1; }
+    .ph__aside { grid-column: 1 / 7; }
+    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (width < 640px) {
+    .ph__aside { grid-column: 1 / -1; }
+    .filter {
+      flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity;
+      margin-inline: calc(-1 * var(--margin)); padding: 2px var(--margin);
+      scrollbar-width: none;
+    }
+    .filter::-webkit-scrollbar { display: none; }
+    .filter__chip { flex: none; scroll-snap-align: start; }
+    .cards { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+
+<script>
+  /*
+   * Status filter (spec §5.5), progressive enhancement: without JS every card shows and the buttons are hidden.
+   * Buttons are toggles (aria-pressed); the count is a polite live region.
+   */
+  for (const root of document.querySelectorAll<HTMLElement>('[data-trade-filter]')) {
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-filter]')];
+    const cards = [...root.querySelectorAll<HTMLElement>('[data-status]')];
+    const count = root.querySelector<HTMLElement>('[data-filter-count]');
+    const empty = root.querySelector<HTMLElement>('[data-filter-empty]');
+
+    const show = (status: string) => {
+      let shown = 0;
+      for (const card of cards) {
+        const match = status === 'all' || card.dataset.status === status;
+        card.hidden = !match;
+        if (match) shown += 1;
+      }
+      for (const button of buttons) button.setAttribute('aria-pressed', String(button.dataset.filter === status));
+      if (count) count.textContent = `${shown} ${shown === 1 ? 'idea' : 'ideas'}`;
+      if (empty) {
+        empty.textContent = `No ${status} ideas.`; // copy deck §7.5
+        empty.hidden = shown > 0;
+      }
+    };
+
+    for (const button of buttons) button.addEventListener('click', () => show(button.dataset.filter ?? 'all'));
+  }
+</script>

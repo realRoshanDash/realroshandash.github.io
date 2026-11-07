@@ -69,7 +69,7 @@ describe('markdownToPlain', () => {
   });
 
   test('notes feed text: code blocks and link targets survive', () => {
-    // The options noteFeedItem (src/lib/content.ts) passes for a feed's content:encoded.
+    // The notes feed's options, as plain text (its HTML, with code line breaks kept, is in note-feed.test.ts).
     const note = 'TIL [jq](https://jqlang.org) can pretty-print:\n\n```sh\ncurl -s "$URL" | jq .\n```';
     assert.equal(
       markdownToPlain(note, { keepCode: true, linkUrls: true, baseUrl: 'https://roshandash.com/notes/til/' }),

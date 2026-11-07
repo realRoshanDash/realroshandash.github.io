@@ -1,0 +1,40 @@
+---
+/**
+ * A ruled row of four figures (design spec §4.21): label, a large thin numeral with a small unit, and a caption.
+ * An en dash means "no value". Four across from 1024px, two by two below.
+ */
+import type { StatCell } from './model';
+
+interface Props {
+  cells: StatCell[];
+  class?: string;
+}
+const { cells, class: className } = Astro.props;
+---
+
+<dl class:list={['stats', 'ruled', className]}>
+  {cells.map((cell) => (
+    <div class="stat">
+      <dt class="label">{cell.label}</dt>
+      <dd class="stat__value t-figure">{cell.value}{cell.unit && <small>{cell.unit}</small>}</dd>
+      <dd class="stat__cap">{cell.caption}</dd>
+    </div>
+  ))}
+</dl>
+
+<style>
+  .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .stat { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 18px 20px 20px; }
+  .stat__value {
+    font-size: var(--fs-numeral); line-height: 0.86; font-weight: 250; letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .stat__value small { margin-left: 0.12em; font-size: 0.42em; font-weight: 500; letter-spacing: -0.01em; color: var(--fg-2); }
+  .stat__cap { font-size: 13px; line-height: 1.45; color: var(--fg-3); }
+  @media (width < 1024px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (width < 640px) {
+    .stat { padding: 16px 14px 18px; }
+  }
+</style>

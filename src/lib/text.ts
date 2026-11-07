@@ -14,7 +14,11 @@ const WORDS_PER_MINUTE = 230;
 const ESCAPED = 0xe000; // an escaped ASCII punctuation character c is held as U+E000 + c (U+E021–U+E07E)
 const LITERAL_OPEN = '\ue100';
 const LITERAL_CLOSE = '\ue101';
-const LITERAL_TOKEN = new RegExp(`${LITERAL_OPEN}(\\d+)${LITERAL_CLOSE}`, 'g');
+// A fenced code block kept by `keepCode` is a paragraph of its own: markdownToBlocks returns it with its line breaks.
+const BLOCK_OPEN = '\ue102';
+const BLOCK_CLOSE = '\ue103';
+const LITERAL_TOKEN = new RegExp(`[${LITERAL_OPEN}${BLOCK_OPEN}](\\d+)[${LITERAL_CLOSE}${BLOCK_CLOSE}]`, 'g');
+const BLOCK_TOKEN = new RegExp(`^${BLOCK_OPEN}\\d+${BLOCK_CLOSE}$`);
 
 const ENTITIES: Record<string, string> = {
   amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
@@ -132,22 +136,30 @@ export interface PlainTextOptions {
   baseUrl?: string;
 }
 
+/** One block of markdownToBlocks: a paragraph of plain text, or a fenced code block exactly as written. */
+export interface PlainBlock {
+  type: 'text' | 'code';
+  /** Text: one line, whitespace collapsed. Code: as written, line breaks and indentation included. */
+  text: string;
+}
+
 /**
- * Markdown (or MDX) → plain text, paragraphs separated by a blank line. Code blocks are dropped unless
- * `keepCode` (reading time counts them; feeds show them). Code is never treated as markup, and its entities and
- * backslashes stay as written. Inline code and link text are kept, link URLs too with `linkUrls`; images are
- * dropped.
+ * Markdown (or MDX) → plain-text blocks, in order. Paragraphs, headings, list items and table rows are text
+ * blocks of one line each. Fenced code blocks are dropped unless `keepCode`, which keeps each one as a code block
+ * with its line breaks. Code is never treated as markup, and its entities and backslashes stay as written. Inline
+ * code and link text are kept, link URLs too with `linkUrls`; images are dropped.
  */
-export function markdownToPlain(md: string, { keepCode = false, linkUrls = false, baseUrl }: PlainTextOptions = {}): string {
+export function markdownToBlocks(md: string, { keepCode = false, linkUrls = false, baseUrl }: PlainTextOptions = {}): PlainBlock[] {
   const literals: string[] = [];
   const literal = (text: string) => `${LITERAL_OPEN}${literals.push(text) - 1}${LITERAL_CLOSE}`;
+  const block = (code: string) => `${BLOCK_OPEN}${literals.push(code) - 1}${BLOCK_CLOSE}`;
   // Entities are decoded before the placeholders are put back, so `&lt;` in code and \&amp; in prose stay as written.
   const finish = (text: string) =>
     decodeEntities(text)
       .replace(LITERAL_TOKEN, (_, i: string) => literals[Number(i)] ?? '')
       .replace(/[\ue021-\ue07e]/g, (char) => String.fromCharCode(char.charCodeAt(0) - ESCAPED));
 
-  let text = stripFences(md.replace(/\r\n?/g, '\n'), keepCode ? literal : null);
+  let text = stripFences(md.replace(/\r\n?/g, '\n'), keepCode ? block : null);
 
   // Escapes and code spans in one left-to-right pass, so \` can't open a code span and a backslash inside one is
   // kept: `\d+\.` stays as written.
@@ -173,9 +185,35 @@ export function markdownToPlain(md: string, { keepCode = false, linkUrls = false
 
   return text
     .split(/\n[ \t]*\n/)
-    .map((paragraph) => finish(stripInline(paragraph, link)).replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
+    .map((paragraph): PlainBlock => {
+      const trimmed = paragraph.trim();
+      return BLOCK_TOKEN.test(trimmed)
+        ? // Leading blank lines and trailing whitespace go; indentation and inner blank lines stay.
+          { type: 'code', text: finish(trimmed).replace(/^(?:[ \t]*\n)+/, '').trimEnd() }
+        : { type: 'text', text: finish(stripInline(paragraph, link)).replace(/\s+/g, ' ').trim() };
+    })
+    .filter((b) => b.text);
+}
+
+/**
+ * Markdown (or MDX) → plain text, paragraphs separated by a blank line (markdownToBlocks, joined). Kept code
+ * blocks are flattened to one line here, which suits word counts and excerpts; markdownToFeedHtml keeps their
+ * line breaks.
+ */
+export function markdownToPlain(md: string, options: PlainTextOptions = {}): string {
+  return markdownToBlocks(md, options)
+    .map((b) => (b.type === 'code' ? b.text.replace(/\s+/g, ' ').trim() : b.text))
     .join('\n\n');
+}
+
+/**
+ * Markdown (or MDX) → the simple HTML a feed reader shows (an item's content:encoded): a <p> per paragraph of
+ * plain text, and every fenced code block as <pre><code>, exactly as written with its line breaks.
+ */
+export function markdownToFeedHtml(md: string, options: Omit<PlainTextOptions, 'keepCode'> = {}): string {
+  return markdownToBlocks(md, { ...options, keepCode: true })
+    .map((b) => (b.type === 'code' ? `<pre><code>${escapeHtml(b.text)}</code></pre>` : `<p>${escapeHtml(b.text)}</p>`))
+    .join('');
 }
 
 /**
