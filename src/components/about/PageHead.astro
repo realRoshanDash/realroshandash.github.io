@@ -1,0 +1,54 @@
+---
+/**
+ * Inner-page head (design spec §5.7 About, §5.8 Contact): the page's real route in mono, the title at page size
+ * (.t-page, cols 1–8) and a lede-sized aside in cols 9–12 that sits on the title's baseline, closed by a section
+ * rule across the content width. Shared by /about/ and /contact/. The aside is the default slot.
+ */
+import { lsbStyle } from '@/lib/optical';
+
+interface Props {
+  /** The page's own path, shown as written (honest wayfinding), e.g. "/about". */
+  route: string;
+  title: string;
+}
+const { route, title } = Astro.props;
+---
+
+<header class="page-head">
+  <div class="wrap">
+    <div class="g page-head__in">
+      <p class="page-head__route mono">{route}</p>
+      <h1 class="page-head__title t-page" style={lsbStyle(title)}>{title}</h1>
+      {Astro.slots.has('default') && <div class="page-head__aside"><slot /></div>}
+    </div>
+  </div>
+</header>
+
+<style>
+  .page-head { padding-top: clamp(32px, 4.4vw, 72px); }
+  .page-head__in {
+    align-items: end;
+    row-gap: 20px;
+    padding-bottom: clamp(28px, 3.2vw, 48px);
+    border-bottom: 1px solid var(--rule-2);
+  }
+  .page-head__route { grid-column: 1 / -1; color: var(--fg-3); }
+  .page-head__title { grid-column: 1 / 9; }
+  /* lede-sized, bottom-aligned with the title and nudged onto its baseline */
+  .page-head__aside {
+    grid-column: 9 / 13;
+    max-width: 24em;
+    padding-bottom: 6px;
+    font-size: var(--fs-lede); line-height: var(--lh-lede); letter-spacing: var(--tr-snug);
+    color: var(--fg-2);
+  }
+
+  @media (width < 1024px) {
+    .page-head__title { grid-column: 1 / -1; }
+    .page-head__aside { grid-column: 3 / -1; padding-bottom: 0; }
+  }
+  @media (width < 640px) {
+    .page-head__in { row-gap: 16px; }
+    .page-head__aside { grid-column: 1 / -1; }
+  }
+</style>

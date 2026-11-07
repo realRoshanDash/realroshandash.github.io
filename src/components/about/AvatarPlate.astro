@@ -1,0 +1,71 @@
+---
+/**
+ * Fig. 01 on /about/ (design spec §5.7, §6.1): avatar.jpg as a dark "mounted print" in both themes — 1:1 on
+ * --plate, the 1px print edge, crop marks and a numbered caption. No dash crosses it, and the photo is final:
+ * no filter, tint, blend or hover effect. On phones it takes cols 2–4 with the caption set vertically in col 1,
+ * like the hero plate.
+ */
+import { Picture } from 'astro:assets';
+import avatar from '@/assets/avatar.jpg';
+import { SITE } from '@/data/site';
+---
+
+<figure class="plate" aria-labelledby="fig-01">
+  <div class="plate__mount">
+    <div class="plate__print" data-plate>
+      <Picture
+        src={avatar}
+        class="plate__img"
+        widths={[480, 800]}
+        sizes="(min-width: 1024px) min(30.4vw, 520px), (min-width: 640px) 46vw, 72vw"
+        formats={['avif', 'webp']}
+        fallbackFormat="webp"
+        quality={60}
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+        alt={`Black-and-white close-up portrait of ${SITE.name}.`}
+      />
+    </div>
+    <span class="crop crop--tl" aria-hidden="true"></span><span class="crop crop--tr" aria-hidden="true"></span>
+    <span class="crop crop--bl" aria-hidden="true"></span><span class="crop crop--br" aria-hidden="true"></span>
+  </div>
+  <figcaption class="plate__cap label" id="fig-01">Fig. 01 — {SITE.name}</figcaption>
+</figure>
+
+<style>
+  .plate { display: grid; gap: 12px; }
+  .plate__mount { position: relative; }
+  .plate__print { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--plate); }
+  .plate__print :global(.plate__img) { width: 100%; height: 100%; object-fit: cover; }
+  /* the print edge: in dark mode the photo's outer tone meets the page ink, so the edge and the marks define it */
+  .plate__print::after {
+    content: ''; position: absolute; inset: 0;
+    border: 1px solid var(--plate-edge);
+    pointer-events: none;
+  }
+
+  .crop { position: absolute; width: 16px; height: 16px; pointer-events: none; }
+  .crop::before, .crop::after { content: ''; position: absolute; background: var(--fg-3); }
+  .crop::before { left: 0; bottom: 0; width: 16px; height: 1px; }
+  .crop::after { right: 0; top: 0; width: 1px; height: 16px; }
+  .crop--tl { left: -24px; top: -24px; }
+  .crop--tr { right: -24px; top: -24px; transform: scaleX(-1); }
+  .crop--bl { left: -24px; bottom: -24px; transform: scaleY(-1); }
+  .crop--br { right: -24px; bottom: -24px; transform: scale(-1, -1); }
+
+  /* Below 1024px the plate sits at the left with content to its right, so the right-hand marks would cross into
+     it: they go, as on the hero plate on phones. */
+  @media (width < 1024px) {
+    .crop--tr, .crop--br { display: none; }
+  }
+  /* phone: cols 2–4 of the 4-column grid; the caption runs up the left edge in col 1 (as on the hero plate) */
+  @media (width < 640px) {
+    .plate { position: relative; }
+    .plate__cap {
+      position: absolute; right: calc(100% + 10px); bottom: 0;
+      writing-mode: vertical-rl; transform: rotate(180deg);
+      white-space: nowrap;
+    }
+  }
+</style>

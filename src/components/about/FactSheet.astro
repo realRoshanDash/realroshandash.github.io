@@ -1,0 +1,94 @@
+---
+/**
+ * The About fact sheet (design spec §5.7, copy §7.10): the ruled, indexed definition list of §4.13, sized for the
+ * side column. Verified facts only (src/data/site.ts and the copy deck): no employers, years or numbers about work.
+ * Multi-part values are real lists, so screen readers hear the items apart; the middots are visual only.
+ */
+import Icon from '@/components/ui/Icon.astro';
+import { SITE, SOCIALS } from '@/data/site';
+import { linkTo } from '@/lib/routes';
+
+// "Verify to reveal" keeps its word: ?verify=1 starts the gate on arrival (the visitor chose to), and a tab that
+// has already verified shows the address at once.
+const verify = linkTo('/contact/?verify=1', '/?verify=1#contact');
+
+type Row = { label: string; items?: readonly string[]; text?: string; sub?: string };
+const ROWS: Row[] = [
+  { label: 'Role', text: 'Software engineer' },
+  { label: 'Focus', items: ['Java', 'Distributed systems', 'Databases', 'System design'] },
+  { label: 'Practice', items: ['AI agents', 'Agentic workflows'] },
+  { label: 'Education', text: SITE.alumni, sub: ', alumnus' },
+  { label: 'Based in', items: [SITE.location, 'UTC+08:00'] },
+];
+const index = (i: number) => `A.${i + 1}`;
+---
+
+<dl class="sheet">
+  {ROWS.map((row, i) => (
+    <div class="sheet__row">
+      <dt class="label">{row.label}</dt>
+      <dd class="sheet__value">
+        {row.items ? (
+          <ul class="sheet__items" role="list">{row.items.map((item) => <li>{item}</li>)}</ul>
+        ) : (
+          <>{row.text}{row.sub && <span class="sheet__sub">{row.sub}</span>}</>
+        )}
+      </dd>
+      <dd class="sheet__idx" aria-hidden="true">{index(i)}</dd>
+    </div>
+  ))}
+  <div class="sheet__row">
+    <dt class="label">Elsewhere</dt>
+    <dd class="sheet__value sheet__links">
+      {SOCIALS.map((s) => <a class="ext-link" href={s.href} rel="me noopener">{s.label}<Icon name="arrow-up-right" /></a>)}
+    </dd>
+    <dd class="sheet__idx" aria-hidden="true">{index(ROWS.length)}</dd>
+  </div>
+  <div class="sheet__row">
+    <dt class="label">Contact</dt>
+    <dd class="sheet__value sheet__links">
+      <a class="sheet__go" href={verify}>Verify to reveal<Icon name="arrow-right" /></a>
+    </dd>
+    <dd class="sheet__idx" aria-hidden="true">{index(ROWS.length + 1)}</dd>
+  </div>
+</dl>
+
+<style>
+  .sheet { border-bottom: 1px solid var(--rule); }
+  .sheet__row {
+    display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: baseline; column-gap: var(--gutter);
+    padding: 13px 0 15px;
+    border-top: 1px solid var(--rule);
+  }
+  .sheet__value { min-width: 0; font-size: 16px; line-height: 1.45; letter-spacing: -0.011em; }
+  .sheet__sub { color: var(--fg-2); }
+  /* items wrap whole, never mid-item; the middot trails its item so no line starts with one */
+  .sheet__items { display: flex; flex-wrap: wrap; column-gap: 0.4em; }
+  .sheet__items li { white-space: nowrap; }
+  .sheet__items li:not(:last-child)::after {
+    content: '·';
+    content: '·' / '';  /* visual separator only: the list already separates the items for screen readers */
+    margin-left: 0.4em;
+    color: var(--fg-3);
+  }
+  .sheet__idx { font-size: 13px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+
+  /* Links get a 32px hit area; the negative margins hand that height back to the row's padding, so link rows keep
+     the same rhythm as text rows and the labels stay on the shared baseline. */
+  .sheet__links { display: flex; flex-wrap: wrap; column-gap: 20px; row-gap: 4px; margin-block: -7px -9px; }
+  .sheet__links a {
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: 32px;
+    border-bottom: 1px solid var(--rule-2);
+    transition: border-color var(--dur-2) linear;
+  }
+  .sheet__links a:hover { border-color: var(--signal-ui); }
+  .sheet__go :global(.icon) { width: 14px; height: 14px; transition: transform var(--dur-4) var(--ease-out); }
+  .sheet__go:hover :global(.icon), .sheet__go:focus-visible :global(.icon) { transform: translateX(4px); }
+
+  @media (width < 640px) {
+    .sheet__row { grid-template-columns: 1fr; row-gap: 6px; }
+    .sheet__idx { display: none; }
+    .sheet__links { margin-block: -4px -6px; }
+  }
+</style>

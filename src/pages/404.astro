@@ -1,0 +1,114 @@
+---
+/**
+ * 404 (design spec §4.20, §5.9, copy §7.8). "404" is set like the hero name — page size, but weight 200 — and the
+ * signal dash runs out of it to the edge of the screen: in a table, an en dash means "no value". GitHub Pages
+ * serves the built 404.html with status 404 for any missing path. No portrait; noindex.
+ */
+import Base from '@/layouts/Base.astro';
+import Button from '@/components/ui/Button.astro';
+import Icon from '@/components/ui/Icon.astro';
+import { linkTo } from '@/lib/routes';
+import { lsbStyle } from '@/lib/optical';
+
+const writing = linkTo('/blog/', '/#writing');
+const contact = linkTo('/contact/', '/#contact');
+---
+
+<Base title="Page not found" description="There’s no page at this address." noindex>
+  {/* kept out of the search index: a page that doesn't exist shouldn't come up as a result */}
+  <div class="nf" data-pagefind-ignore="all">
+    <div class="wrap g">
+      <div class="nf__in">
+        <p class="nf__code" style={lsbStyle('404', 'thin')}><span class="sr-only">Error </span>404</p>
+        <h1 class="nf__title t-display" style={lsbStyle('Nothing here.')}>Nothing here.</h1>
+        <p class="t-lede nf__body"><span data-nf-where>There’s no page at this address.</span> It may have moved when the site was rebuilt.</p>
+        {/* Names the missing path before first paint, so nothing reflows. Inserted as text, never as HTML. */}
+        <script is:inline>
+          (function () {
+            var where = document.querySelector('[data-nf-where]');
+            var path = location.pathname;
+            if (!where || /^\/404(\.html)?\/?$/.test(path)) return;
+            try { path = decodeURI(path); } catch (e) {}
+            if (path.length > 80) path = path.slice(0, 79) + '…';
+            var code = document.createElement('code');
+            code.className = 'nf__path';
+            code.textContent = path;
+            where.textContent = 'There’s no page at ';
+            where.append(code, '.');
+          })();
+        </script>
+        <div class="nf__actions">
+          <Button variant="primary" href="/" icon="arrow-right">Go home</Button>
+          <button class="btn nf__search" type="button" data-open-palette data-requires-js aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+            <span>Search the site</span>{' '}<kbd data-kbd>Ctrl K</kbd>
+          </button>
+          <a class="nf__link" href={writing}>Writing<Icon name="arrow-right" /></a>
+          <a class="nf__link" href={contact}>Contact<Icon name="arrow-right" /></a>
+        </div>
+        <p class="label nf__note">In a table, an en dash means “no value”.</p>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<style>
+  /* one block, vertically centred between the header and the footer; the dash may run to the screen edge */
+  .nf { overflow-x: clip; }
+  .nf .g {
+    min-height: calc(100svh - var(--nav-h) - 240px);
+    align-content: center;
+    padding-block: clamp(48px, 7vw, 112px);
+  }
+  .nf__in { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: flex-start; }
+
+  /* the hero technique at weight 200 (§4.20): an en dash's proportions, drawn as ::after, off the right edge */
+  .nf__code {
+    margin-left: calc(-1em * var(--lsb, 0));
+    font-size: var(--fs-page); line-height: var(--lh-page); letter-spacing: var(--tr-display); font-weight: 200;
+    font-variation-settings: var(--opsz-display);
+    color: var(--fg-3);
+    white-space: nowrap;
+  }
+  .nf__code::after {
+    content: ''; display: inline-block;
+    width: 100vw; margin-right: -100vw;  /* runs off the right edge, takes no inline space */
+    height: 0.06em; margin-left: 0.12em;
+    vertical-align: 0.27em;
+    background: var(--signal);
+    transform-origin: left center;
+    animation: dash-draw var(--dur-6) var(--ease-out) 120ms both;
+  }
+
+  .nf__title { margin-top: clamp(20px, 2.4vw, 36px); }
+  .nf__body { max-width: 34em; margin-top: clamp(16px, 1.8vw, 24px); }
+  .nf__body :global(.nf__path) {
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.86em; letter-spacing: 0;
+    color: var(--fg); overflow-wrap: anywhere;
+  }
+
+  .nf__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: clamp(28px, 3vw, 40px); }
+  .nf__search { gap: 12px; padding-right: 7px; }
+  .nf__search kbd { min-width: 52px; }
+  .nf__link {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-height: 48px; margin-left: 10px;
+    font-size: 15px; font-weight: 550; letter-spacing: -0.01em;
+    text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px;
+    text-decoration-color: var(--rule-2);
+    transition: text-decoration-color var(--dur-2) linear;
+  }
+  .nf__link :global(.icon) { width: 14px; height: 14px; transition: transform var(--dur-4) var(--ease-out); }
+  .nf__link:hover { text-decoration-color: var(--signal-ui); }
+  .nf__link:hover :global(.icon), .nf__link:focus-visible :global(.icon) { transform: translateX(4px); }
+
+  .nf__note { margin-top: clamp(40px, 5vw, 72px); }
+
+  /* touch screens rarely have the shortcut: the button keeps its label, the key hint goes */
+  @media (width < 1024px), (pointer: coarse) {
+    .nf__search kbd { display: none; }
+    .nf__search { padding-right: 20px; }
+  }
+  @media (width < 640px) {
+    .nf__link { margin-left: 0; margin-right: 14px; }
+  }
+</style>

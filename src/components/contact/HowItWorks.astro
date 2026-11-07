@@ -1,0 +1,53 @@
+---
+/**
+ * "How this works" under the gate on /contact/ (design spec §5.8, copy §7.6): three plain facts about the
+ * proof-of-work. The expected work is computed from the sealed card's difficulty — 2^(d−1) hashes on average —
+ * so the sentence stays true when the card is re-sealed at another difficulty.
+ */
+import sealed from '@/data/contact.sealed.json';
+
+interface Props {
+  /** id of the heading, for aria-labelledby. */
+  id?: string;
+}
+const { id = 'how-title' } = Astro.props;
+
+const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+/** 2,097,152 → "two million"; 524,288 → "524 thousand"; 4,096 → "four thousand". */
+function roughly(n: number): string {
+  for (const [size, name] of [[1e9, 'billion'], [1e6, 'million'], [1e3, 'thousand']] as const) {
+    if (n >= size) {
+      const value = Math.round(n / size);
+      return `${value < 10 ? WORDS[value] : value} ${name}`;
+    }
+  }
+  return String(n);
+}
+const expected = roughly(2 ** (sealed.difficulty - 1));
+const STEPS = [
+  `Your browser searches for a secret number: on average about ${expected} SHA-256 hashes.`,
+  'That number becomes the key that decrypts the address, locally.',
+  'Nothing is sent anywhere: no cookies, no tracking.',
+];
+---
+
+<section class="how" aria-labelledby={id}>
+  <h2 class="label how__title" id={id}>How this works</h2>
+  <ol class="how__list" role="list">
+    {STEPS.map((step, i) => (
+      <li class="how__step"><span class="how__n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><p>{step}</p></li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .how { display: grid; gap: 12px; }
+  .how__list { border-bottom: 1px solid var(--rule); }
+  .how__step {
+    display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: baseline; column-gap: 12px;
+    padding: 10px 0 11px;
+    border-top: 1px solid var(--rule);
+    font-size: 14px; line-height: 1.5; color: var(--fg-2);
+  }
+  .how__n { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+</style>

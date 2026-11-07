@@ -1,0 +1,147 @@
+---
+/**
+ * About (design spec §5.7, copy §7.10): an editor's letter set in Swiss type beside the Fig. 01 plate and a ruled
+ * fact sheet, then Practice (the same Stages + Transcript as Home, not inverted here) and the colophon.
+ * Built only from verified facts (src/data/site.ts and the copy deck). The one personal line — reading,
+ * photography and travel — appears here and nowhere else.
+ */
+import Base from '@/layouts/Base.astro';
+import PageHead from '@/components/about/PageHead.astro';
+import AvatarPlate from '@/components/about/AvatarPlate.astro';
+import FactSheet from '@/components/about/FactSheet.astro';
+import Stages from '@/components/home/Stages.astro';
+import AgentTranscript from '@/components/AgentTranscript.astro';
+import SectionHead from '@/components/layout/SectionHead.astro';
+import Button from '@/components/ui/Button.astro';
+import { getPosts } from '@/lib/content';
+import { linkTo, routeExists } from '@/lib/routes';
+import { SITE, SOCIALS } from '@/data/site';
+
+const contact = linkTo('/contact/', '/#contact');
+// A second call to action only once there is writing to read (and its page is built).
+const writing = (await getPosts()).length > 0 && routeExists('/blog/') ? '/blog/' : undefined;
+
+const description = `${SITE.name} is a software engineer in ${SITE.location}: Java, distributed systems, databases and system design, with AI agents and agentic workflows woven into how he designs, builds and ships.`;
+
+// JSON-LD ProfilePage (spec §8.7): the same verified fields as the Person on Home, nothing more.
+const profile = {
+  '@context': 'https://schema.org',
+  '@type': 'ProfilePage',
+  url: new URL('/about/', SITE.url).href,
+  mainEntity: {
+    '@type': 'Person',
+    name: SITE.name,
+    url: SITE.url,
+    jobTitle: 'Software engineer',
+    address: { '@type': 'PostalAddress', addressLocality: SITE.location, addressCountry: 'SG' },
+    alumniOf: { '@type': 'CollegeOrUniversity', name: 'Indian Institute of Technology Guwahati', alternateName: SITE.alumni },
+    knowsAbout: ['Java', 'Distributed systems', 'Databases', 'System design', 'AI agents'],
+    sameAs: SOCIALS.map((s) => s.href),
+  },
+};
+---
+
+<Base title="About" description={description}>
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(profile)} />
+  <PageHead route="/about" title="About">
+    <p>Software engineer in {SITE.location}.</p>
+  </PageHead>
+
+  <div class="wrap g about">
+    <div class="letter">
+      <p class="t-statement">I’m Roshan&nbsp;— a software engineer in {SITE.location}. I design and build backend systems: Java, distributed systems, databases and system design. <span class="mute">AI agents and agentic workflows are woven into how I design, build and ship.</span></p>
+      <p class="t-lede letter__more">I’m an alumnus of {SITE.alumni}. Off the clock: reading, photography and travel.</p>
+      <p class="sig">
+        <span class="sig__dash" aria-hidden="true"></span><span class="sig__name">{SITE.name}</span>{' '}
+        <span class="sig__role label"><span class="nw">Software engineer ·</span> <span class="nw">{SITE.alumni} alumnus</span></span>
+      </p>
+      <div class="letter__cta">
+        <Button variant="primary" href={contact} icon="arrow-right">Get in touch</Button>
+        {writing && <Button href={writing} icon="arrow-right">Read the writing</Button>}
+      </div>
+    </div>
+    <div class="about__side">
+      <div class="about__plate"><AvatarPlate /></div>
+      <div class="about__facts" data-reveal="1"><FactSheet /></div>
+    </div>
+  </div>
+
+  <section class="sec" aria-labelledby="practice-title">
+    <div class="wrap">
+      <SectionHead num="01" id="practice-title" title="Practice" desc="How I work: AI agents and agentic workflows, woven into every stage of building software." />
+      <div class="g practice">
+        <Stages />
+        <div class="practice__transcript"><AgentTranscript /></div>
+      </div>
+    </div>
+  </section>
+
+  {/* End matter: set small, like a book's colophon */}
+  <section class="colophon" aria-labelledby="colophon-title">
+    <div class="wrap">
+      <div class="g colophon__in" data-reveal="0">
+        <h2 class="label colophon__label" id="colophon-title">Colophon</h2>
+        <p class="colophon__text"><strong>This site is static and built with Astro.</strong> Set in Inter and JetBrains Mono, on a twelve-column grid, with one signal colour: <span class="nw"><span class="swatch" aria-hidden="true"></span><span class="mono colophon__hex">#FF5A1F</span>.</span> No cookies, no tracking. The email address is sealed with AES-256-GCM behind a SHA-256 proof-of-work.</p>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .nw { white-space: nowrap; }
+
+  /* letter (cols 1–7) beside the plate and fact sheet (cols 9–12) */
+  .about { align-items: start; row-gap: var(--stack); padding-top: var(--stack); }
+  .letter { grid-column: 1 / 8; display: flex; flex-direction: column; align-items: flex-start; }
+  .letter__more { max-width: 30em; margin-top: clamp(24px, 2.6vw, 40px); }
+  .sig { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; row-gap: 6px; margin-top: clamp(32px, 3.4vw, 52px); }
+  .sig__dash { width: 20px; height: 5px; background: var(--signal); }
+  .sig__name { font-size: 15px; font-weight: 650; letter-spacing: -0.02em; }
+  .sig__role { grid-column: 2; }
+  .letter__cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: clamp(32px, 3.4vw, 48px); }
+
+  .about__side { grid-column: 9 / 13; display: grid; row-gap: var(--stack); }
+
+  /* The side column runs longer than the letter: on screens tall enough to hold the whole letter, it stays in
+     view beside the fact sheet and comes to rest level with its end (sticky, so nothing moves on its own). */
+  @media (width >= 1024px) and (height >= 760px) {
+    .letter { position: sticky; top: calc(var(--nav-h) + var(--stack)); }
+  }
+
+  /* Practice: the Home figures on the page ground (not an inverted band) */
+  .practice { row-gap: var(--stack); }
+  .practice__transcript { grid-column: 3 / 13; }
+
+  /* Colophon: end matter, ruled like a fact row */
+  .colophon { position: relative; padding-bottom: clamp(64px, 7vw, 112px); }
+  .colophon__in { row-gap: 12px; padding-top: 18px; border-top: 1px solid var(--rule-2); }
+  .colophon__label { grid-column: 1 / 3; padding-top: 0.4em; }
+  .colophon__text {
+    grid-column: 3 / 10; max-width: 40em;
+    font-size: var(--fs-lede); line-height: var(--lh-lede); letter-spacing: var(--tr-snug); color: var(--fg-2);
+  }
+  .colophon__text strong { color: var(--fg); font-weight: 600; }
+  .swatch { display: inline-block; width: 20px; height: 5px; margin: 0 0.4em 0 0.1em; vertical-align: 0.28em; background: var(--signal); }
+  .colophon__hex { font-size: 0.82em; color: var(--fg); }
+
+  /* tablet: the letter takes the full width; the plate and the fact sheet sit side by side under it */
+  @media (width < 1024px) {
+    .letter { grid-column: 1 / -1; }
+    /* room for the plate's crop marks above it */
+    .about__side { grid-column: 1 / -1; grid-template-columns: subgrid; align-items: start; padding-top: 24px; }
+    .about__plate { grid-column: 1 / 5; grid-row: 1; }
+    .about__facts { grid-column: 5 / 9; grid-row: 1; }
+    .practice__transcript { grid-column: 1 / -1; }
+    .colophon__label { grid-column: 1 / 3; }
+    .colophon__text { grid-column: 3 / -1; }
+  }
+  /* phone: title → letter → plate (cols 2–4) → fact sheet → practice → colophon */
+  @media (width < 640px) {
+    .about__plate { grid-column: 2 / 5; grid-row: 1; }
+    .about__facts { grid-column: 1 / -1; grid-row: 2; }
+    .letter__cta { width: 100%; }
+    .letter__cta :global(.btn) { flex: 1 1 0; }
+    .colophon__label, .colophon__text { grid-column: 1 / -1; }
+    .colophon__label { padding-top: 0; }
+  }
+</style>
