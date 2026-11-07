@@ -7,7 +7,7 @@
  */
 import { Picture } from 'astro:assets';
 import avatar from '@/assets/avatar.jpg';
-import { SITE } from '@/data/site';
+import { PORTRAIT_ALT, SITE } from '@/data/site';
 ---
 
 <figure class="plate" aria-labelledby="fig-01">
@@ -22,9 +22,8 @@ import { SITE } from '@/data/site';
         fallbackFormat="webp"
         quality={60}
         loading="eager"
-        fetchpriority="high"
         decoding="async"
-        alt={`Black-and-white close-up portrait of ${SITE.name}.`}
+        alt={PORTRAIT_ALT}
       />
     </div>
     <span class="crop crop--tl" aria-hidden="true"></span><span class="crop crop--tr" aria-hidden="true"></span>
@@ -35,7 +34,7 @@ import { SITE } from '@/data/site';
 
 <style>
   .plate { display: grid; gap: 12px; }
-  .plate__mount { position: relative; }
+  .plate__mount { position: relative; --crop-off: 24px; }
   .plate__print { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--plate); }
   .plate__print :global(.plate__img) { width: 100%; height: 100%; object-fit: cover; }
   /* the print edge: in dark mode the photo's outer tone meets the page ink, so the edge and the marks define it */
@@ -49,15 +48,20 @@ import { SITE } from '@/data/site';
   .crop::before, .crop::after { content: ''; position: absolute; background: var(--fg-3); }
   .crop::before { left: 0; bottom: 0; width: 16px; height: 1px; }
   .crop::after { right: 0; top: 0; width: 1px; height: 16px; }
-  .crop--tl { left: -24px; top: -24px; }
-  .crop--tr { right: -24px; top: -24px; transform: scaleX(-1); }
-  .crop--bl { left: -24px; bottom: -24px; transform: scaleY(-1); }
-  .crop--br { right: -24px; bottom: -24px; transform: scale(-1, -1); }
+  .crop--tl { left: calc(-1 * var(--crop-off)); top: calc(-1 * var(--crop-off)); }
+  .crop--tr { right: calc(-1 * var(--crop-off)); top: calc(-1 * var(--crop-off)); transform: scaleX(-1); }
+  .crop--bl { left: calc(-1 * var(--crop-off)); bottom: calc(-1 * var(--crop-off)); transform: scaleY(-1); }
+  .crop--br { right: calc(-1 * var(--crop-off)); bottom: calc(-1 * var(--crop-off)); transform: scale(-1, -1); }
 
   /* Below 1024px the plate sits at the left with content to its right, so the right-hand marks would cross into
      it: they go, as on the hero plate on phones. */
   @media (width < 1024px) {
     .crop--tr, .crop--br { display: none; }
+  }
+  /* On tablets the plate starts on the page margin (cols 1–4), narrower than the marks' 24px offset: they move in
+     to stay 4px clear of the screen edge instead of running off it. */
+  @media (640px <= width < 1024px) {
+    .plate__mount { --crop-off: min(24px, calc(var(--margin) - 4px)); }
   }
   /* phone: cols 2–4 of the 4-column grid; the caption runs up the left edge in col 1 (as on the hero plate) */
   @media (width < 640px) {

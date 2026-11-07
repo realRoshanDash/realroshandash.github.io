@@ -3,14 +3,16 @@
  * The About fact sheet (design spec §5.7, copy §7.10): the ruled, indexed definition list of §4.13, sized for the
  * side column. Verified facts only (src/data/site.ts and the copy deck): no employers, years or numbers about work.
  * Multi-part values are real lists, so screen readers hear the items apart; the middots are visual only.
+ * The {' '}s between labels and values keep their words apart in the search index; the grid ignores them.
  */
 import Icon from '@/components/ui/Icon.astro';
 import { SITE, SOCIALS } from '@/data/site';
 import { linkTo } from '@/lib/routes';
 
 // "Verify to reveal" keeps its word: ?verify=1 starts the gate on arrival (the visitor chose to), and a tab that
-// has already verified shows the address at once.
-const verify = linkTo('/contact/?verify=1', '/?verify=1#contact');
+// has already verified shows the address at once. The anchor lands on the gate itself, so the address it reveals
+// is on screen too, on phones as well.
+const verify = linkTo('/contact/?verify=1#contact-gate', '/?verify=1#contact-gate');
 
 type Row = { label: string; items?: readonly string[]; text?: string; sub?: string };
 const ROWS: Row[] = [
@@ -26,29 +28,29 @@ const index = (i: number) => `A.${i + 1}`;
 <dl class="sheet">
   {ROWS.map((row, i) => (
     <div class="sheet__row">
-      <dt class="label">{row.label}</dt>
+      <dt class="label">{row.label}</dt>{' '}
       <dd class="sheet__value">
         {row.items ? (
           <ul class="sheet__items" role="list">{row.items.map((item) => <li>{item}</li>)}</ul>
         ) : (
           <>{row.text}{row.sub && <span class="sheet__sub">{row.sub}</span>}</>
         )}
-      </dd>
+      </dd>{' '}
       <dd class="sheet__idx" aria-hidden="true">{index(i)}</dd>
     </div>
   ))}
   <div class="sheet__row">
-    <dt class="label">Elsewhere</dt>
+    <dt class="label">Elsewhere</dt>{' '}
     <dd class="sheet__value sheet__links">
-      {SOCIALS.map((s) => <a class="ext-link" href={s.href} rel="me noopener">{s.label}<Icon name="arrow-up-right" /></a>)}
-    </dd>
+      {SOCIALS.map((s) => <><a class="ext-link" href={s.href} rel="me noopener">{s.label}<Icon name="arrow-up-right" /></a>{' '}</>)}
+    </dd>{' '}
     <dd class="sheet__idx" aria-hidden="true">{index(ROWS.length)}</dd>
   </div>
   <div class="sheet__row">
-    <dt class="label">Contact</dt>
+    <dt class="label">Contact</dt>{' '}
     <dd class="sheet__value sheet__links">
       <a class="sheet__go" href={verify}>Verify to reveal<Icon name="arrow-right" /></a>
-    </dd>
+    </dd>{' '}
     <dd class="sheet__idx" aria-hidden="true">{index(ROWS.length + 1)}</dd>
   </div>
 </dl>
@@ -86,6 +88,12 @@ const index = (i: number) => `A.${i + 1}`;
   .sheet__go :global(.icon) { width: 14px; height: 14px; transition: transform var(--dur-4) var(--ease-out); }
   .sheet__go:hover :global(.icon), .sheet__go:focus-visible :global(.icon) { transform: translateX(4px); }
 
+  /* Small desktops: cols 9–12 are only ~310px wide, so the index goes and the label column narrows, leaving the
+     values room to keep their items on shared lines. */
+  @media (1024px <= width < 1280px) {
+    .sheet__row { grid-template-columns: 84px minmax(0, 1fr); }
+    .sheet__idx { display: none; }
+  }
   @media (width < 640px) {
     .sheet__row { grid-template-columns: 1fr; row-gap: 6px; }
     .sheet__idx { display: none; }

@@ -71,7 +71,7 @@ function toItem(post: Post, numbers: Map<string, number>): PostItem {
     year,
     tags: tagRefs(post.data.tags),
     draft: post.data.draft,
-    archived: Number(year) < ARCHIVE_BEFORE_YEAR,
+    archived: post.data.archived ?? Number(year) < ARCHIVE_BEFORE_YEAR,
     vt: vtName(post.id),
   };
 }

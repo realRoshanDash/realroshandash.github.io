@@ -17,7 +17,7 @@ import UpdateLog from '@/components/trades/UpdateLog.astro';
 import ChartFacade from '@/components/trades/ChartFacade.astro';
 import Disclaimer from '@/components/trades/Disclaimer.astro';
 import Prose from '@/components/notes/Prose.astro';
-import { ideaCells, titleCase } from '@/components/trades/model';
+import { ideaCells, titleCase, tradeNumber } from '@/components/trades/model';
 import { SITE } from '@/data/site';
 import { adjacent, entryPath, getTrades } from '@/lib/content';
 import { formatDateISO, formatPrice } from '@/lib/format';
@@ -34,8 +34,8 @@ const { trade, trades } = Astro.props;
 const t = trade.data;
 const { Content } = await render(trade);
 const iso = formatDateISO(t.published);
-// "No. 001" is the oldest idea (getTrades is newest first).
-const no = trades.length - trades.findIndex((other) => other.id === trade.id);
+// "No. 001" is the oldest idea (getTrades is newest first); the /trades/ cards number from the same list.
+const no = tradeNumber(trades, trade.id);
 const { prev: older, next: newer } = adjacent(trades, trade.id);
 const symbol = tvSymbol(t);
 // The giant ticker fits its column whatever its length (Inter Bold caps ≈ 0.7em each, tracking included), and its
@@ -43,9 +43,11 @@ const symbol = tvSymbol(t);
 const tickerStyle = [`--chars:${Math.max(3, t.ticker.length)}`, lsbStyle(t.ticker)].filter(Boolean).join(';');
 ---
 
-<Base title={t.title} description={truncate(t.summary, 200)} type="article">
+<Base title={t.title} description={truncate(t.summary, 200)} type="article" noindex={t.draft} search={false}>
   <link slot="head" rel="alternate" type="application/rss+xml" title={`Trade ideas — ${SITE.name}`} href="/trades/rss.xml" />
-  <article class="wrap td" aria-labelledby="td-title" data-pagefind-body data-pagefind-meta="title[data-title]" data-title={t.title}>
+  {/* Out of the ⌘K full-text index (search={false}): its results show in the chrome of every page, and trading
+      copy stays inside this section. */}
+  <article class="wrap td" aria-labelledby="td-title">
     <header class="td-head g">
       <div class="td-crumb">
         <p class="label" data-pagefind-ignore>

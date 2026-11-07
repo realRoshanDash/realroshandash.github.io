@@ -37,7 +37,7 @@ const {
 <figure class="transcript-fig" data-reveal="3" aria-labelledby="fig-03">
   <div class="transcript" data-plate>
     <div class="transcript__bar">
-      <span>{file}</span>
+      <span>{file}</span>{' '}
       <span class="badge transcript__badge"><span class="badge__hatch" aria-hidden="true"></span>Illustrative</span>
     </div>
     <div class="transcript__body">
@@ -50,14 +50,14 @@ const {
             <p class="turn__plan">
               <span class="call__kind">plan</span>{' '}
               {turn.plan.split(' → ').map((step, i) => (
-                <>{i > 0 && <Icon name="arrow-right" class="turn__arrow" />}{step}</>
+                <>{i > 0 && <>{' '}<Icon name="arrow-right" class="turn__arrow" />{' '}</>}{step}</>
               ))}
             </p>
             {turn.calls.map((call) => (
               <p class="call">
-                <span class="call__kind">tool</span>
-                <span class="call__name">{call.name}</span>
-                <span class="call__arg">{call.arg}</span>
+                <span class="call__kind">tool</span>{' '}
+                <span class="call__name">{call.name}</span>{' '}
+                <span class="call__arg">{call.arg}</span>{' '}
                 <span class:list={['call__out', { 'call__out--ok': call.ok }]}>{call.out ?? ''}</span>
               </p>
             ))}
@@ -96,7 +96,8 @@ const {
   .turn--you .turn__text { font: 400 15px/1.5 var(--font-sans, sans-serif); letter-spacing: -0.011em; }
   .turn__work { display: grid; gap: 6px; min-width: 0; }
   .turn__plan { color: var(--plate-fg-2); }
-  .turn__plan :global(.turn__arrow) { display: inline-block; width: 12px; height: 12px; margin: 0 8px; vertical-align: -1px; color: var(--plate-fg-3); }
+  /* a space either side (one mono space, ~8px), which also keeps the steps apart for screen readers and search */
+  .turn__plan :global(.turn__arrow) { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; color: var(--plate-fg-3); }
   .call {
     display: grid; grid-template-columns: 40px 104px minmax(0, 1fr) auto; gap: 12px;
     padding: 6px 10px;

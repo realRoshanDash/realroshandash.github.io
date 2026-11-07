@@ -2,9 +2,13 @@
 /**
  * Tag filter (design spec §5.2, §5.4): a row of chip *links*, "All" plus one per tag with its count, most used
  * first. It works without JS because every chip is a page. Wraps on desktop; on phones it scrolls sideways
- * with snap points and a fade at the right edge.
+ * with snap points and a fade at the right edge, and a small script scrolls the current chip into view.
+ *
+ * Once notes are published (the dormant notes section), they are reached from here: a "Notes" chip after "All"
+ * (§4.21), never a nav item of their own.
  */
 import type { TagSummary } from '@/lib/content';
+import { getNotes } from '@/lib/content';
 import { tagHref, tagLabel } from './posts';
 
 interface Props {
@@ -15,20 +19,28 @@ interface Props {
   current?: string;
 }
 const { total, tags, current } = Astro.props;
-const posts = (n: number) => (n === 1 ? ' post' : ' posts');
+const notes = (await getNotes()).length;
+const plural = (n: number, word: string) => (n === 1 ? ` ${word}` : ` ${word}s`);
 ---
 
 <nav class="tag-filter" aria-label="Tags" data-pagefind-ignore>
-  <ul class="tag-filter__list" role="list">
+  <ul class="tag-filter__list" role="list" data-tag-filter>
     <li>
       <a class="chip" href="/blog/" aria-current={current ? undefined : 'page'}>
-        All{' '}<span class="count">{total}<span class="sr-only">{posts(total)}</span></span>
+        All{' '}<span class="count">{total}<span class="sr-only">{plural(total, 'post')}</span></span>
       </a>
     </li>
+    {notes > 0 && (
+      <li>
+        <a class="chip" href="/notes/">
+          Notes{' '}<span class="count">{notes}<span class="sr-only">{plural(notes, 'note')}</span></span>
+        </a>
+      </li>
+    )}
     {tags.map((tag) => (
       <li>
         <a class="chip" href={tagHref(tag.slug)} aria-current={tag.slug === current ? 'page' : undefined}>
-          {tagLabel(tag.tag)}{' '}<span class="count">{tag.count}<span class="sr-only">{posts(tag.count)}</span></span>
+          {tagLabel(tag.tag)}{' '}<span class="count">{tag.count}<span class="sr-only">{plural(tag.count, 'post')}</span></span>
         </a>
       </li>
     ))}
@@ -62,3 +74,18 @@ const posts = (n: number) => (n === 1 ? ' post' : ' posts');
     .tag-filter__list li:last-child { padding-right: 24px; }
   }
 </style>
+
+<script>
+  /*
+   * On a phone the row scrolls sideways in count order, so the current tag can start out past the right-edge
+   * fade. When it does, the row starts at the current chip instead, on the page gutter where "All" would sit.
+   * Without JS the row simply starts at "All".
+   */
+  for (const list of document.querySelectorAll<HTMLElement>('[data-tag-filter]')) {
+    const item = list.querySelector<HTMLElement>('[aria-current="page"]')?.parentElement;
+    if (!item || list.scrollWidth <= list.clientWidth) continue;
+    if (item.offsetLeft + item.offsetWidth > list.clientWidth - 24) {
+      list.scrollLeft = item.offsetLeft - parseFloat(getComputedStyle(list).paddingLeft);
+    }
+  }
+</script>

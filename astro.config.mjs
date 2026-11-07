@@ -8,6 +8,7 @@ import { satteri } from '@astrojs/markdown-satteri';
 import satteriCallouts from 'satteri-callouts';
 import { SITE } from './src/data/site.ts';
 import pruneUnusedCss from './src/integrations/prune-unused-css.ts';
+import csp from './src/integrations/csp.ts';
 import { normalizeHeadings } from './src/lib/markdown/normalize-headings.ts';
 import { wrapTables } from './src/lib/markdown/wrap-tables.ts';
 
@@ -76,5 +77,7 @@ export default defineConfig({
     mdx(),
     sitemap({ filter: (page) => !/\/(admin|404)(\/|$)/.test(new URL(page).pathname) }),
     pruneUnusedCss(), // unpublished sections (no pages) leave no stylesheets behind
+    // Content-Security-Policy per page, as a <meta> (GitHub Pages sends no headers): hashes what each page has inline
+    csp(),
   ],
 });

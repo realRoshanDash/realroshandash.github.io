@@ -4,9 +4,9 @@
  * inside — with a combobox, a grouped listbox of pages, writing, actions and profiles, a preview pane on wide
  * screens, and full-text results from Pagefind. Mounted once by Base.astro.
  *
- * Opens on ⌘K / Ctrl+K, "/" (outside text fields; can be turned off from the palette, WCAG 2.1.4) and every
- * [data-open-palette] button. This shell is server-rendered so it opens instantly; src/scripts/palette.ts is
- * loaded on first use and fills it. Rows are built at runtime, so the styles below are global (all .palette*).
+ * Opens on ⌘K / Ctrl+K and every [data-open-palette] button; there is no single-key shortcut (spec §4.5, WCAG
+ * 2.1.4). This shell is server-rendered so it opens instantly; src/scripts/palette.ts is loaded on first use and
+ * fills it. Rows are built at runtime, so the styles below are global (all .palette*).
  */
 import Icon from '@/components/ui/Icon.astro';
 import { getPaletteData } from './palette-data';
@@ -45,7 +45,9 @@ const enter = 'M13 3.5V9H3.5M6.5 6 3.5 9l3 3';
   <div class="palette__body">
     <div class="palette__results">
       <p class="palette__note label" data-palette-note hidden>Full-text search unavailable.</p>
-      <div class="palette__list" id="palette-list" role="listbox" aria-label="Results" data-palette-list></div>
+      <!-- tabindex -1: a scrolling list would otherwise be its own Tab stop (Chromium) where the arrow keys do
+           nothing; the combobox input stays the one place keys go (aria-activedescendant). -->
+      <div class="palette__list" id="palette-list" role="listbox" aria-label="Results" tabindex="-1" data-palette-list></div>
       <div class="palette__empty" data-palette-empty hidden>
         <p class="palette__empty-title" data-palette-empty-title></p>
         <p class="palette__empty-hint" data-palette-empty-hint></p>

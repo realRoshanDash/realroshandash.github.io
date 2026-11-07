@@ -6,7 +6,7 @@
  * photography and travel — appears here and nowhere else.
  */
 import Base from '@/layouts/Base.astro';
-import PageHead from '@/components/about/PageHead.astro';
+import PageHead from '@/components/layout/PageHead.astro';
 import AvatarPlate from '@/components/about/AvatarPlate.astro';
 import FactSheet from '@/components/about/FactSheet.astro';
 import Stages from '@/components/home/Stages.astro';
@@ -56,7 +56,7 @@ const profile = {
         <span class="sig__role label"><span class="nw">Software engineer ·</span> <span class="nw">{SITE.alumni} alumnus</span></span>
       </p>
       <div class="letter__cta">
-        <Button variant="primary" href={contact} icon="arrow-right">Get in touch</Button>
+        <Button variant="primary" href={contact} icon="arrow-right">Get in touch</Button>{' '}
         {writing && <Button href={writing} icon="arrow-right">Read the writing</Button>}
       </div>
     </div>

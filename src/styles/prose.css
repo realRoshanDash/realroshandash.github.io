@@ -295,7 +295,8 @@
   transition: border-color var(--dur-2) linear, color var(--dur-2) linear;
 }
 .prose [data-footnote-backref]:hover { border-color: var(--signal-ui); color: var(--signal-text); }
-.prose [data-footnote-backref] sup { font-size: 0.8em; line-height: 0; }
+/* a note cited twice gets ↑ and ↑²: the index keeps the 12px text floor (spec §8.8) */
+.prose [data-footnote-backref] sup { font-size: 12px; line-height: 0; }
 
 /* ---------- details ---------- */
 .prose details:not(.callout) { margin-block: 0 1.2em; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
@@ -332,9 +333,14 @@
 .expressive-code .ec-line.ins .gutter { box-shadow: inset var(--signal-bar) 0 var(--ec-tm-insBrdCol); }
 .expressive-code .ec-line.del .gutter { box-shadow: inset var(--signal-bar) 0 var(--ec-tm-delBrdCol); }
 .expressive-code .ec-line:is(.mark, .ins, .del) .gutter ~ .code { border-inline-start-color: transparent; }
-/* the copy button is always there, not only on hover (it is how code leaves the page), and it sits in the header
-   bar when there is one, not over the first line */
+/* The copy button sits in the header bar when there is one, and there it is always visible (it is how code leaves
+   the page). In an untitled frame it would sit over the first line, so there it keeps Expressive Code's own reveal
+   on hover and focus; on touch screens, where Expressive Code always shows it, the code starts below it. */
 .prose .expressive-code figure.frame:is(.has-title, .is-terminal) { --button-spacing: 6px; } /* beats EC's own (0,4,0) */
-.prose .expressive-code .copy button { width: 32px; height: 32px; opacity: 0.75; }
-.prose .expressive-code .copy button:is(:hover, :focus-visible) { opacity: 1; }
+.prose .expressive-code .copy button { width: 32px; height: 32px; }
+.prose .expressive-code figure.frame:is(.has-title, .is-terminal) .copy button { opacity: 0.75; }
+.prose .expressive-code figure.frame:is(.has-title, .is-terminal) .copy button:is(:hover, :focus-visible) { opacity: 1; }
+@media (hover: none) {
+  .prose .expressive-code figure.frame:not(.has-title, .is-terminal) pre { padding-top: 32px; }
+}
 .prose .expressive-code .copy button::after { margin: 8px; }

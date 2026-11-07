@@ -7,12 +7,16 @@ import { entryPath, getPosts } from '@/lib/content';
 import { formatDateISO } from '@/lib/format';
 import type { PaletteData } from '@/lib/palette';
 import { linkTo, routeExists } from '@/lib/routes';
-import { readingTime } from '@/lib/text';
+import { minutesToRead } from '@/lib/text';
 
-/** Titles of this many posts ship for title search when the full-text index is missing (Pagefind covers all). */
-const MAX_POSTS = 100;
 /** The empty state previews the latest posts; only those carry a description. */
 const LATEST = 3;
+/**
+ * Posts serialised into every page. A built site ships only the latest few: Pagefind searches every post and its
+ * hits carry their own title, date and minutes. `astro dev` has no index, so there the titles of up to 100 posts
+ * ship for title search. (100 posts would be ~4–5 KB gzip on every page, against the 35 KB HTML budget.)
+ */
+const MAX_POSTS = import.meta.env.DEV ? 100 : LATEST;
 
 async function build(): Promise<PaletteData> {
   const posts = (await getPosts())
@@ -25,8 +29,7 @@ async function build(): Promise<PaletteData> {
       url,
       description: i < LATEST ? post.data.description : '',
       date: formatDateISO(post.data.published),
-      // same arithmetic as the Writing list on Home: 230 words a minute, rounded up
-      minutes: Math.max(1, Math.ceil(readingTime(post.body ?? '').words / 230)),
+      minutes: minutesToRead(post.body),
       tags: post.data.tags.slice(0, 3),
       ...(post.data.draft ? { draft: true } : {}),
     }));
@@ -72,7 +75,8 @@ async function build(): Promise<PaletteData> {
       description: `${social.label} profile: ${social.handle}.`,
       keywords: ['profile', social.handle],
     })),
-    verify: routeExists('/contact/') ? '/contact/?verify=1' : '/?verify=1#contact',
+    // lands on the gate (ContactGate's id), so the address it reveals is in view too
+    verify: routeExists('/contact/') ? '/contact/?verify=1#contact-gate' : '/?verify=1#contact-gate',
   };
 }
 

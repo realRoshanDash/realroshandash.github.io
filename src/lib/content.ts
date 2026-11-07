@@ -158,9 +158,6 @@ export function feedChannel(
   };
 }
 
-/** Newest first, for merging feed items from several sections. */
-export const byPubDate = (a: FeedItem, b: FeedItem) => b.pubDate.getTime() - a.pubDate.getTime();
-
 const asSentence = (text: string) => (/[.!?…]$/.test(text.trim()) ? text.trim() : `${text.trim()}.`);
 
 export function postFeedItem(post: Post): FeedItem {

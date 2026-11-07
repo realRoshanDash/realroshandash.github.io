@@ -29,7 +29,8 @@ const RULES = [
   // Any real-looking address on the domain (the masked "••••••••@roshandash.com" has no local part).
   { name: 'email address', re: /[a-z0-9._%+-]+@roshandash\.com/gi },
   // Markup never links to an address: the contact card builds its mailto: link in the browser after the proof-of-work.
-  { name: 'mailto link', re: /mailto:/gi, only: /\.(?:html?|xml)$/i },
+  // A bare "mailto:" (the Content-Security-Policy's form-action source, followed by ";" or a quote) is no link.
+  { name: 'mailto link', re: /mailto:(?![\s;"']|$)/gi, only: /\.(?:html?|xml)$/i },
 ];
 
 const roots = process.argv.slice(2).length ? process.argv.slice(2) : ['dist', 'public'];

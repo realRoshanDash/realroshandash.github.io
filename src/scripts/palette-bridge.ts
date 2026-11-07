@@ -4,7 +4,7 @@
  *
  *   addEventListener('palette:open', (event) => { event.preventDefault(); open(event.detail); });
  *
- * Shortcuts only take over the browser's own ⌘K / Ctrl+K / "/" when the request was claimed, so nothing is
+ * The shortcut only takes over the browser's own ⌘K / Ctrl+K when the request was claimed, so nothing is
  * swallowed on a page that has no palette.
  */
 export interface PaletteOpenDetail {

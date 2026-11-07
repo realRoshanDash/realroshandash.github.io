@@ -18,26 +18,21 @@ import { SITE } from '@/data/site';
 const items = await getPostItems();
 const tags = await getTags('blog');
 const featured = items.find((item) => item.post.data.featured);
-// Search (Pagefind) indexes only what is marked data-pagefind-body: the posts. With none published, this page is
-// marked instead, so the index holds "Writing: nothing published yet" rather than every page's chrome.
-const searchBody = items.length === 0 ? '' : undefined;
 ---
 
 <Base title="Writing" description={WRITING_DESCRIPTION}>
   <link slot="head" rel="alternate" type="application/rss+xml" title={`${SITE.name} — Writing`} href={WRITING_FEED} />
-  <div data-pagefind-body={searchBody}>
-    <IndexHead route="/blog" title="Writing" desc={WRITING_DESCRIPTION} rss={WRITING_FEED} />
-    <div class="wrap writing">
-      <TagFilter total={items.length} tags={tags} />
-      {items.length === 0 ? (
-        <div class="writing__empty"><PostListEmpty contact={linkTo('/contact/', '/#contact')} /></div>
-      ) : (
-        <>
-          {featured && <PostCard item={featured} />}
-          <PostList items={items} as="h3" years columns reveal />
-        </>
-      )}
-    </div>
+  <IndexHead route="/blog" title="Writing" desc={WRITING_DESCRIPTION} rss={WRITING_FEED} />
+  <div class="wrap writing">
+    <TagFilter total={items.length} tags={tags} />
+    {items.length === 0 ? (
+      <div class="writing__empty"><PostListEmpty contact={linkTo('/contact/', '/#contact')} /></div>
+    ) : (
+      <>
+        {featured && <PostCard item={featured} />}
+        <PostList items={items} as="h3" years columns reveal />
+      </>
+    )}
   </div>
 </Base>
 

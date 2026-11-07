@@ -53,7 +53,7 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
 
   <dl class="channels" data-fields>
     <div class="channel channel--email" data-email-row>
-      <dt class="label">Email</dt>
+      <dt class="label">Email</dt>{' '}
       <dd class="channel__value" data-email-value><span aria-hidden="true">••••••••@roshandash.com</span><span class="sr-only">Hidden until you verify</span></dd>
       <dd class="channel__act">
         <button type="button" class="chip-btn" disabled data-locked><Icon name="lock" />Locked</button>
@@ -63,7 +63,7 @@ const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0secon
     </div>
     {SOCIALS.map((s) => (
       <div class="channel">
-        <dt class="label">{s.label}</dt>
+        <dt class="label">{s.label}</dt>{' '}
         <dd class="channel__value"><a class="ext-link" href={s.href} rel="me noopener">{HANDLES[s.label] ?? s.handle}<Icon name="arrow-up-right" /></a></dd>
       </div>
     ))}

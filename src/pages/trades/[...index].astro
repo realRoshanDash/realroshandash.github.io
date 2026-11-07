@@ -1,7 +1,8 @@
 ---
 /**
  * /trades/ — trade ideas (dormant: design spec §4.21, §5.5). Never linked from the header, the hero or Home;
- * reachable from the footer index (src/lib/nav.ts), the sitemap and its feed once something is published.
+ * reachable from the footer index (src/lib/nav.ts), the sitemap and its feed once something is published. Kept
+ * out of the ⌘K full-text index (search={false}), whose results appear in the chrome of every page.
  *
  * A rest route instead of index.astro so the page can be absent: getStaticPaths yields /trades/ only while at
  * least one idea is published, so until then the build has no page, no nav item, no sitemap entry and no feed.
@@ -12,7 +13,7 @@ import Icon from '@/components/ui/Icon.astro';
 import TradeCard from '@/components/trades/TradeCard.astro';
 import StatsRow from '@/components/trades/StatsRow.astro';
 import Disclaimer from '@/components/trades/Disclaimer.astro';
-import { trackRecordCells } from '@/components/trades/model';
+import { trackRecordCells, tradeNumber } from '@/components/trades/model';
 import { SITE } from '@/data/site';
 import { getTrades } from '@/lib/content';
 import { pluralize } from '@/lib/format';
@@ -25,9 +26,10 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 const { trades } = Astro.props;
-// "No. 001" is the oldest idea, like posts.
-const byAge = [...trades].sort((a, b) => a.data.published.getTime() - b.data.published.getTime() || a.id.localeCompare(b.id));
-const numberOf = (id: string) => byAge.findIndex((trade) => trade.id === id) + 1;
+// "No. 001" is the oldest idea, like posts: numbered from the same newest-first list as each idea's own page, so a
+// card and its page always agree (the cards themselves are in status order).
+const newestFirst = await getTrades();
+const numberOf = (id: string) => tradeNumber(newestFirst, id);
 // Filter buttons in lifecycle order; "All" first and pressed.
 const FILTERS: { status: TradeStatus | 'all'; label: string }[] = [
   { status: 'all', label: 'All' },
@@ -42,7 +44,7 @@ const countOf = (status: TradeStatus | 'all') =>
 const description = 'Personal notes on US-equity setups: entry, stop and targets logged in advance, scored in R once closed.';
 ---
 
-<Base title="Trade ideas" description={description}>
+<Base title="Trade ideas" description={description} search={false}>
   <link slot="head" rel="alternate" type="application/rss+xml" title={`Trade ideas — ${SITE.name}`} href="/trades/rss.xml" />
   <div class="wrap">
     <header class="ph g">
@@ -123,6 +125,7 @@ const description = 'Personal notes on US-equity setups: entry, stop and targets
     .filter {
       flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity;
       margin-inline: calc(-1 * var(--margin)); padding: 2px var(--margin);
+      scroll-padding-inline: var(--margin); /* "All" snaps to the page gutter, not the screen edge */
       scrollbar-width: none;
     }
     .filter::-webkit-scrollbar { display: none; }

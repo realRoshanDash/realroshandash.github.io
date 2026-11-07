@@ -14,19 +14,23 @@ interface Props {
   /** Open Graph image (site-relative). Default: the page's own card from src/lib/og.ts, else the site card. */
   image?: string;
   type?: 'website' | 'article';
-  /** Also keeps the page out of the site search index. */
+  /** Also keeps the page out of the site search index, and gives it no canonical URL. */
   noindex?: boolean;
+  /** In the ⌘K full-text index (Pagefind). The dormant trade ideas opt out: search results show in site chrome. */
+  search?: boolean;
   /** Reading-progress bar in the header (posts). */
   progress?: boolean;
   /** Text alternative for the share image (spec §6.4: the post title on post cards). */
   imageAlt?: string;
 }
-const { title, description = SITE.description, type = 'website', noindex = false, progress = false } = Astro.props;
+const { title, description = SITE.description, type = 'website', noindex = false, search = true, progress = false } = Astro.props;
 const fullTitle = title ? `${title} — ${SITE.title}` : `${SITE.name} — Software engineer in Singapore`;
-const canonical = new URL(Astro.url.pathname, SITE.url).href;
+// A noindex page (404, draft previews) names no canonical URL: the 404's own URL would itself answer 404.
+const canonical = noindex ? undefined : new URL(Astro.url.pathname, SITE.url).href;
 const card = Astro.props.image ? { src: Astro.props.image, alt: Astro.props.imageAlt ?? fullTitle } : await ogImageFor(Astro.url.pathname);
 const ogImage = new URL(card.src, SITE.url).href;
 const ogImageAlt = Astro.props.imageAlt ?? card.alt;
+const ogImageType = /\.jpe?g$/i.test(card.src) ? 'image/jpeg' : /\.webp$/i.test(card.src) ? 'image/webp' : 'image/png';
 ---
 
 <!doctype html>
@@ -34,7 +38,9 @@ const ogImageAlt = Astro.props.imageAlt ?? card.alt;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <!-- Before any stylesheet: theme (stored choice, else the system), .js, and .intro-seen after the first page of a session. -->
+    <!-- Before any stylesheet: theme (stored choice, else the system), .js, and .intro-seen after the first page of a session.
+         The build puts the Content-Security-Policy between <meta charset> and here, with this script's hash
+         (src/integrations/csp.ts), so <meta charset> stays first and the policy covers everything after it. -->
     <script is:inline>
       (function () {
         var d = document.documentElement, t = null;
@@ -47,7 +53,7 @@ const ogImageAlt = Astro.props.imageAlt ?? card.alt;
     </script>
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={canonical} />
+    {canonical && <link rel="canonical" href={canonical} />}
     {noindex && <meta name="robots" content="noindex" />}
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)" />
@@ -62,9 +68,9 @@ const ogImageAlt = Astro.props.imageAlt ?? card.alt;
     <meta property="og:site_name" content={SITE.name} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonical} />
+    {canonical && <meta property="og:url" content={canonical} />}
     <meta property="og:image" content={ogImage} />
-    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:type" content={ogImageType} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={ogImageAlt} />
@@ -84,7 +90,7 @@ const ogImageAlt = Astro.props.imageAlt ?? card.alt;
     <GridOverlay />
     <SiteHeader progress={progress} />
     <!-- Site search indexes <main> only (header, footer and palette stay out); noindex pages stay out entirely. -->
-    <main id="main" tabindex="-1" data-pagefind-body={noindex ? undefined : ''}>
+    <main id="main" tabindex="-1" data-pagefind-body={search && !noindex ? '' : undefined}>
       <slot />
     </main>
     <SiteFooter />

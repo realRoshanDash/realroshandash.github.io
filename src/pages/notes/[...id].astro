@@ -33,9 +33,10 @@ const pageTitle = noteTitle(note);
 const description = excerpt(note.body ?? '', 160) || pageTitle;
 ---
 
-<Base title={pageTitle} description={description} type="article">
+<Base title={pageTitle} description={description} type="article" noindex={draft}>
   <link slot="head" rel="alternate" type="application/rss+xml" title={`Notes — ${SITE.name}`} href="/notes/rss.xml" />
-  <article class="wrap note" aria-labelledby="note-title" data-pagefind-body data-pagefind-meta="title[data-title]" data-title={pageTitle}>
+  {/* Search indexes Base's <main> (a draft preview is noindex, so it stays out); this names the result. */}
+  <article class="wrap note" aria-labelledby="note-title" data-pagefind-meta="title[data-title]" data-title={pageTitle}>
     <header class="note-head g">
       <p class="note-head__crumb label" data-pagefind-ignore>
         <a href="/notes/">Notes</a><span aria-hidden="true">/</span><span>No. {no}</span>
@@ -69,7 +70,7 @@ const description = excerpt(note.body ?? '', 160) || pageTitle;
     </dl>
 
     <Prose class="note-body">
-      {image && <Image class="note-body__img" src={image} alt={imageAlt ?? ''} widths={[640, 960, 1280]} sizes="(min-width: 1024px) 50vw, 100vw" />}
+      {image && <Image class="note-body__img" src={image} alt={imageAlt ?? ''} widths={[640, 960, 1280]} sizes="(min-width: 1024px) 50vw, calc(100vw - 40px)" />}
       <Content />
     </Prose>
 
@@ -122,8 +123,13 @@ const description = excerpt(note.body ?? '', 160) || pageTitle;
   .note-meta__link a:hover { color: var(--signal-text); }
 
   .note :global(.note-body) { padding-top: clamp(36px, 4.5vw, 64px); }
-  /* landscape photos fill the text column; portrait ones stop at most of a screen */
-  .note :global(.note-body__img) { width: auto; height: auto; max-height: min(80svh, 760px); border: 1px solid var(--rule); }
+  /* landscape photos fill the text column; portrait ones stop at most of a screen. The width cap is the column
+     (less the margin column it hangs past), so on a phone the photo never runs off the screen. */
+  .note :global(.note-body__img) {
+    width: auto; height: auto;
+    max-width: min(calc(100% - var(--hang, 0px)), var(--measure)); max-height: min(80svh, 760px);
+    border: 1px solid var(--rule);
+  }
 
   .pager { row-gap: 16px; margin-top: clamp(48px, 6vw, 96px); padding-top: 18px; border-top: 1px solid var(--rule-2); }
   .pager__link {

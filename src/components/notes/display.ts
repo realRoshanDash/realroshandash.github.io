@@ -4,8 +4,9 @@
 
 /**
  * A link as people read it: no scheme, no "www.", no trailing slash, query or fragment, and at most `max`
- * characters (cut at a path segment where possible).
- *   https://www.nyse.com/markets/hours-calendars → nyse.com/markets/hours-calendars
+ * characters (cut at a path segment where possible). Percent-escapes are decoded when they form valid UTF-8; a
+ * path that doesn't decode (a bare "%", Latin-1 escapes) is shown as written rather than failing the build.
+ *   https://www.example.com/docs/guide/ → example.com/docs/guide
  */
 export function displayUrl(href: string, max = 48): string {
   let url: URL;
@@ -15,7 +16,13 @@ export function displayUrl(href: string, max = 48): string {
     return href;
   }
   const host = url.hostname.replace(/^www\./, '');
-  const path = decodeURI(url.pathname).replace(/\/+$/, '');
+  let decoded = url.pathname;
+  try {
+    decoded = decodeURI(decoded);
+  } catch {
+    /* malformed escape: keep it encoded */
+  }
+  const path = decoded.replace(/\/+$/, '');
   const full = `${host}${path}`;
   if (full.length <= max) return full;
   const room = max - host.length - 2; // "/…"

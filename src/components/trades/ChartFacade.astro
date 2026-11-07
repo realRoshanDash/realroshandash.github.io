@@ -18,9 +18,15 @@ interface Props {
   id?: string;
 }
 const { symbol, chart, chartAlt, id = 'chart' } = Astro.props;
+
+// What the click-to-load embed needs from the Content-Security-Policy, added only to pages this facade is on
+// (src/integrations/csp.ts): TradingView's script; the chart's iframe (the script falls back to s.tradingview.com
+// when its first host is blocked); and the <style> element it appends beside the iframe, whose text isn't stable
+// enough to hash, so on these pages <style> elements are allowed inline. Scripts stay hash-only.
+const CSP = "script-src https://s3.tradingview.com; frame-src https://www.tradingview-widget.com https://s.tradingview.com; style-src 'unsafe-inline'";
 ---
 
-<figure class="chart" data-chart data-symbol={symbol} aria-labelledby={`${id}-cap`}>
+<figure class="chart" data-chart data-symbol={symbol} data-csp={CSP} aria-labelledby={`${id}-cap`}>
   <figcaption class="chart__top" id={`${id}-cap`}>
     <span class="label">Chart · <span class="chart__sym">{symbol}</span> · Daily</span>
   </figcaption>
@@ -38,7 +44,7 @@ const { symbol, chart, chartAlt, id = 'chart' } = Astro.props;
 
   <div class="chart__actions" data-requires-js>
     <button class="btn btn--sm chart__load" type="button" data-chart-load><span>Load interactive chart (TradingView)</span></button>
-    <p class="chart__note" data-chart-note>Loads a third-party script from tradingview.com.</p>
+    <p class="chart__note" data-chart-note>Loads a third-party script.</p>
   </div>
   <p class="chart__status" data-chart-status aria-live="polite"></p>
   <a class="ext-link chart__out" href={tradingViewUrl(symbol)} rel="noopener">Open {symbol} on TradingView<Icon name="arrow-up-right" /></a>

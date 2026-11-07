@@ -16,6 +16,7 @@ import {
   spreadLabels,
   trackRecordCells,
   tradeLog,
+  tradeNumber,
   tradingViewUrl,
   type LogInput,
 } from '../src/components/trades/model.ts';
@@ -246,9 +247,20 @@ describe('stats cells', () => {
   });
 });
 
+describe('numbering', () => {
+  test('an idea has one number, oldest first, whatever order the page lists it in (same-day ideas included)', () => {
+    // getTrades(): newest first, ties by id — AAPL and JPM were both published on 2026-11-06
+    const newestFirst = [{ id: 'aapl-same-day' }, { id: 'jpm-flat-base' }, { id: 'nvda-breakout' }, { id: 'tsla-short' }];
+    const byStatus = [newestFirst[2], newestFirst[0], newestFirst[3], newestFirst[1]]; // the index's card order
+    const numbers = Object.fromEntries(byStatus.map((t) => [t.id, tradeNumber(newestFirst, t.id)]));
+    assert.deepEqual(numbers, { 'nvda-breakout': 2, 'aapl-same-day': 4, 'tsla-short': 1, 'jpm-flat-base': 3 });
+    assert.equal(tradeNumber(newestFirst, 'missing'), 0);
+  });
+});
+
 describe('links', () => {
   test('displayUrl reads like the link, and stays short', () => {
-    assert.equal(displayUrl('https://www.nyse.com/markets/hours-calendars'), 'nyse.com/markets/hours-calendars');
+    assert.equal(displayUrl('https://www.example.com/docs/guide/'), 'example.com/docs/guide');
     assert.equal(displayUrl('https://example.com/'), 'example.com');
     assert.equal(displayUrl('https://example.com/a/b/?q=1#x'), 'example.com/a/b');
     assert.equal(
@@ -257,6 +269,14 @@ describe('links', () => {
     );
     assert.ok(displayUrl('https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:where').length <= 48);
     assert.equal(displayUrl('not a url'), 'not a url');
+  });
+
+  test('displayUrl decodes what it can and never throws on a malformed escape', () => {
+    assert.equal(displayUrl('https://example.com/caf%C3%A9'), 'example.com/café');
+    // URIError from decodeURI used to fail the whole build for one published note
+    assert.equal(displayUrl('https://example.com/100%'), 'example.com/100%');
+    assert.equal(displayUrl('https://en.wikipedia.org/wiki/100%_(album)'), 'en.wikipedia.org/wiki/100%_(album)');
+    assert.equal(displayUrl('https://example.com/%zz/%E9'), 'example.com/%zz/%E9');
   });
 
   test('TradingView symbol pages', () => {

@@ -29,9 +29,9 @@ const { num, title, id, desc, link, rss } = Astro.props;
         <p class="sec-head__links">
           {link && (
             <a class="route-link" href={link.href}>
-              <span class="route">{link.route}</span><span class="leader" aria-hidden="true"></span><span class="text">{link.label}<Icon name="arrow-right" /></span>
+              <span class="route">{link.route}</span>{' '}<span class="leader" aria-hidden="true"></span>{' '}<span class="text">{link.label}<Icon name="arrow-right" /></span>
             </a>
-          )}
+          )}{' '}
           {rss && <a class="arrow-link sec-head__rss" href={rss}>RSS feed<Icon name="rss" /></a>}
         </p>
       )}

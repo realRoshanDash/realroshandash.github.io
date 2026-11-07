@@ -20,6 +20,11 @@ const blog = defineCollection({
       cover: image().optional(),
       coverAlt: z.string().optional(),
       featured: z.boolean().default(false),
+      /**
+       * Restored from the previous version of the site (the FROM THE ARCHIVE badge and note). Unset, a post counts
+       * as archived when it was published before 2025; set it to say so either way (a backdated new post: false).
+       */
+      archived: z.boolean().optional(),
       draft: z.boolean().default(false),
     }),
 });

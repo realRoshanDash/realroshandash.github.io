@@ -54,4 +54,12 @@ describe('content guard', () => {
     assert.equal(guard({ 'b.html': '<a href="mailto:x">x</a>' }).code, 1);
     assert.equal(guard({ 'c.js': 'const href = `mailto:${value}`;' }).code, 0);
   });
+
+  test("the policy's form-action mailto: source is not a link, but a mailto: link right after it still is", () => {
+    const meta = `<meta http-equiv="Content-Security-Policy" content="form-action 'self' mailto:; base-uri 'self'">`;
+    assert.equal(guard({ 'a.html': meta }).code, 0);
+    assert.equal(guard({ 'b.html': `<meta http-equiv="Content-Security-Policy" content="form-action 'self' mailto:">` }).code, 0);
+    assert.equal(guard({ 'c.html': `${meta}<a href="mailto:?subject=hi">x</a>` }).code, 1);
+    assert.equal(guard({ 'd.html': '<a href="mailto:&#120;">x</a>' }).code, 1); // an entity-encoded address
+  });
 });

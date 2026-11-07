@@ -11,7 +11,7 @@
 import { getImage } from 'astro:assets';
 import Button from '@/components/ui/Button.astro';
 import cutout from '@/assets/portrait-cutout.png';
-import { SITE } from '@/data/site';
+import { PORTRAIT_ALT, SITE } from '@/data/site';
 import { linkTo } from '@/lib/routes';
 
 interface Props {
@@ -40,10 +40,10 @@ const PHONE = '(max-width: 639px)';
   <div class="wrap g hero__grid">
     <ol class="hero__ruler" aria-hidden="true">{Array.from({ length: 12 }, (_, i) => <li>{String(i + 1).padStart(2, '0')}</li>)}</ol>
     <dl class="hero__meta">
-      <div><dt class="label">Role</dt><dd>Software engineer</dd></div>
-      <div><dt class="label">Focus</dt><dd>Java, distributed systems, databases</dd></div>
-      <div><dt class="label">Practice</dt><dd>AI agents, agentic workflows</dd></div>
-      <div><dt class="label">Local time</dt><dd><span class="clock" data-clock>UTC+08:00</span></dd></div>
+      <div><dt class="label">Role</dt>{' '}<dd>Software engineer</dd></div>
+      <div><dt class="label">Focus</dt>{' '}<dd>Java, distributed systems, databases</dd></div>
+      <div><dt class="label">Practice</dt>{' '}<dd>AI agents, agentic workflows</dd></div>
+      <div><dt class="label">Local time</dt>{' '}<dd><span class="clock" data-clock>UTC+08:00</span></dd></div>
     </dl>
     <!-- the space between the spans matters: the accessible name must be "Roshan Dash", not "RoshanDash" -->
     <h1 class="hero__name" id="hero-name"><span class="line">Roshan</span>{' '}<span class="line line--dash">Dash</span></h1>
@@ -65,7 +65,7 @@ const PHONE = '(max-width: 639px)';
               loading="eager"
               fetchpriority="high"
               decoding="async"
-              alt="Black-and-white portrait of Roshan Dash, head and shoulders, in a dark polo shirt."
+              alt={PORTRAIT_ALT}
             />
           </picture>
         </div>
@@ -79,12 +79,12 @@ const PHONE = '(max-width: 639px)';
       <div class="hero__cta">
         {hasPosts ? (
           <>
-            <Button variant="primary" href={writing} icon="arrow-right">Read the writing</Button>
+            <Button variant="primary" href={writing} icon="arrow-right">Read the writing</Button>{' '}
             <Button href={contact} icon="arrow-right">Get in touch</Button>
           </>
         ) : (
           <>
-            <Button variant="primary" href={contact} icon="arrow-right">Get in touch</Button>
+            <Button variant="primary" href={contact} icon="arrow-right">Get in touch</Button>{' '}
             <Button href={about} icon="arrow-right">About me</Button>
           </>
         )}

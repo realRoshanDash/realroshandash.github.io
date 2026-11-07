@@ -20,7 +20,6 @@ import {
   type PaletteGroup,
   type Range,
 } from '../lib/palette.ts';
-import { keyShortcuts, setSlashShortcut, slashShortcutOn } from '../lib/palette-shortcut.ts';
 
 interface Item {
   /** Stable identity across renders: the page path, or the action's id. */
@@ -48,7 +47,8 @@ interface Item {
 interface PagefindData {
   url: string;
   excerpt: string;
-  meta: { title?: string };
+  /** title, plus date and minutes on posts (data-pagefind-meta in src/pages/blog/[...id].astro) */
+  meta: { title?: string; date?: string; minutes?: string };
   sub_results?: { title: string; url: string; excerpt: string; locations?: number[] }[];
 }
 interface Pagefind {
@@ -60,7 +60,7 @@ interface Pagefind {
 const PAGEFIND = '/pagefind/pagefind.js';
 const SEARCH_DELAY = 120; // ms after the last keystroke (spec: debounced 120 ms)
 const ANNOUNCE_DELAY = 400; // ms after typing stops before the count is read out
-const MAX_HITS = 8;
+const MAX_HITS = 6; // spec §4.5: the first 6 Pagefind hits
 const LATEST = 3;
 const SCORE_POST_HIT = 35; // full-text hits rank below label matches; posts just above pages
 const SCORE_PAGE_HIT = 30;
@@ -197,8 +197,6 @@ export function mount(dialog: HTMLDialogElement) {
     const next = theme === 'dark' ? 'light' : 'dark';
     const system = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
     const grid = root.classList.contains('show-grid');
-    const slash = slashShortcutOn();
-    const mod = apple ? '⌘K' : 'Ctrl K';
     return [
       action('theme', `Switch to ${next} theme`, 'Theme',
         next === 'light' ? 'Paper: dark ink on a warm white page.' : 'Ink: light text on a near-black page.',
@@ -212,11 +210,6 @@ export function mount(dialog: HTMLDialogElement) {
         'Proof of work · SHA-256', ['email', 'mail', 'contact', 'captcha', 'proof of work', 'address'], verify),
       action('copy', copied ?? 'Copy page link', 'Link', `Copies ${pageLink()} to the clipboard.`, 'Clipboard',
         ['copy', 'url', 'share', 'clipboard', 'permalink'], () => void copyLink()),
-      action('slash', `Turn ${slash ? 'off' : 'on'} the / shortcut`, 'Keyboard',
-        slash
-          ? `Typing / outside a text field opens this palette. Turn it off if it gets in the way; ${mod} keeps working.`
-          : `Let / open this palette from anywhere outside a text field. ${mod} always works.`,
-        `Shortcut · ${slash ? 'On' : 'Off'}`, ['shortcut', 'slash', 'keyboard', 'key', 'hotkey'], toggleSlash),
     ];
   }
 
@@ -270,14 +263,6 @@ export function mount(dialog: HTMLDialogElement) {
     }, 2000);
   }
 
-  function toggleSlash() {
-    const on = !slashShortcutOn();
-    setSlashShortcut(on);
-    for (const button of document.querySelectorAll('[data-open-palette]')) button.setAttribute('aria-keyshortcuts', keyShortcuts(on));
-    announce(on ? 'The / shortcut is on.' : 'The / shortcut is off.');
-    refresh();
-  }
-
   /* ---------------------------------------------------------------- Pagefind */
   let pagefind: Pagefind | null | undefined; // undefined: loading or not tried; null: unavailable
   let pagefindLoad: Promise<Pagefind | null> | undefined;
@@ -310,16 +295,19 @@ export function mount(dialog: HTMLDialogElement) {
     const post = postByPath.get(path);
     const page = pageByPath.get(path);
     const base = post ?? page;
+    // Only the latest posts ship with the page (palette-data.ts): older ones read their date and minutes from the index.
+    const { date, minutes } = result.meta;
     return {
       key: path,
       group: post || (/^\/blog\/(?!tags\/)[^/]+\/$/.test(path) && !page) ? 'writing' : 'pages',
       label: base?.label ?? result.meta.title ?? displayRoute(path, location.origin),
       url: deep?.url ?? result.url,
-      meta: base?.meta ?? displayRoute(path, location.origin),
-      metaIsRoute: base ? base.metaIsRoute : true,
+      meta: base?.meta ?? (minutes ? `${minutes} min` : displayRoute(path, location.origin)),
+      metaIsRoute: base ? base.metaIsRoute : !minutes,
       route: displayRoute(path, location.origin),
       excerpt: deep?.excerpt ?? result.excerpt,
-      info: [base?.info, deep && deep.title !== result.meta.title ? `Section · ${deep.title}` : ''].filter(Boolean).join(' · ') || undefined,
+      info: [base?.info ?? (date && minutes ? `${date} · ${minutes} min` : undefined), deep && deep.title !== result.meta.title ? `Section · ${deep.title}` : '']
+        .filter(Boolean).join(' · ') || undefined,
       score: post ? SCORE_POST_HIT : SCORE_PAGE_HIT,
       ranges: [],
     };

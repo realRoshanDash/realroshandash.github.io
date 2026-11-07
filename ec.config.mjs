@@ -107,40 +107,71 @@ function pluginLineNumbers() {
   };
 }
 
+/** How a language reads: in the frame header (JAVA, SQL) and in a scrolling block's accessible name. */
+const LANGUAGE_NAMES = /** @type {Record<string, string>} */ ({
+  ts: 'TypeScript', typescript: 'TypeScript', tsx: 'TSX', js: 'JavaScript', javascript: 'JavaScript', jsx: 'JSX',
+  mjs: 'JavaScript', java: 'Java', kotlin: 'Kotlin', kt: 'Kotlin', go: 'Go', rust: 'Rust', rs: 'Rust', py: 'Python',
+  python: 'Python', sql: 'SQL', json: 'JSON', yaml: 'YAML', yml: 'YAML', toml: 'TOML', xml: 'XML', html: 'HTML',
+  css: 'CSS', diff: 'Diff', md: 'Markdown', mdx: 'MDX', proto: 'Protobuf', graphql: 'GraphQL', dockerfile: 'Dockerfile',
+  astro: 'Astro', c: 'C', cpp: 'C++', scala: 'Scala', groovy: 'Groovy', hcl: 'HCL', ini: 'INI', properties: 'Properties',
+});
+
+/**
+ * The first element called `tagName` in a HAST tree.
+ * @param {any} node @param {string} tagName @returns {any}
+ */
+function findElement(node, tagName) {
+  if (node?.type === 'element' && node.tagName === tagName) return node;
+  for (const child of node?.children ?? []) {
+    const hit = findElement(child, tagName);
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
 /**
  * The language in the frame header, set in the label style (JAVA, SQL): what the block is, read before the code.
  * Terminal frames already say what they are.
  * @returns {import('astro-expressive-code').ExpressiveCodePlugin}
  */
 function pluginLanguageLabel() {
-  const NAMES = /** @type {Record<string, string>} */ ({
-    ts: 'TypeScript', typescript: 'TypeScript', tsx: 'TSX', js: 'JavaScript', javascript: 'JavaScript', jsx: 'JSX',
-    mjs: 'JavaScript', java: 'Java', kotlin: 'Kotlin', kt: 'Kotlin', go: 'Go', rust: 'Rust', rs: 'Rust', py: 'Python',
-    python: 'Python', sql: 'SQL', json: 'JSON', yaml: 'YAML', yml: 'YAML', toml: 'TOML', xml: 'XML', html: 'HTML',
-    css: 'CSS', diff: 'Diff', md: 'Markdown', mdx: 'MDX', proto: 'Protobuf', graphql: 'GraphQL', dockerfile: 'Dockerfile',
-    astro: 'Astro', c: 'C', cpp: 'C++', scala: 'Scala', groovy: 'Groovy', hcl: 'HCL', ini: 'INI', properties: 'Properties',
-  });
   return {
     name: 'rd-language-label',
     hooks: {
       postprocessRenderedBlock: ({ codeBlock, renderData }) => {
-        const label = NAMES[codeBlock.language];
+        const label = LANGUAGE_NAMES[codeBlock.language];
         if (!label) return;
-        /** @param {any} node @returns {any} */
-        const find = (node) => {
-          if (node?.type === 'element' && node.tagName === 'figcaption') return node;
-          for (const child of node?.children ?? []) {
-            const hit = find(child);
-            if (hit) return hit;
-          }
-          return undefined;
-        };
-        const caption = find(renderData.blockAst);
+        const caption = findElement(renderData.blockAst, 'figcaption');
         if (!caption) return;
         /** @type {any} */
         const frame = renderData.blockAst.children?.find((/** @type {any} */ c) => c.type === 'element' && c.tagName === 'figure');
         if (String(frame?.properties?.className ?? '').includes('is-terminal')) return;
         caption.children.push(h('span.lang', label));
+      },
+    },
+  };
+}
+
+/**
+ * A name for every block's <pre>. Expressive Code's runtime makes a block that overflows sideways a focusable
+ * role="region" (so the keyboard can scroll it), and regions need names that tell them apart (axe
+ * landmark-unique): "Code block 2: OrderController.java", "Code block 3: Java". Until the block overflows, the
+ * name is inert.
+ * @returns {import('astro-expressive-code').ExpressiveCodePlugin}
+ */
+function pluginRegionName() {
+  return {
+    name: 'rd-region-name',
+    hooks: {
+      postprocessRenderedBlock: ({ codeBlock, renderData }) => {
+        const pre = findElement(renderData.blockAst, 'pre');
+        if (!pre) return;
+        // the block's place in its document (counted by astro-expressive-code), so names never repeat on a page
+        const index = codeBlock.parentDocument?.positionInDocument?.groupIndex;
+        const number = index === undefined ? '' : ` ${index + 1}`;
+        const title = String(codeBlock.props.title ?? '').trim();
+        const what = title || LANGUAGE_NAMES[codeBlock.language] || '';
+        pre.properties = { ...pre.properties, ariaLabel: `Code block${number}${what ? `: ${what}` : ''}` };
       },
     },
   };
@@ -152,7 +183,7 @@ export default defineEcConfig({
   useDarkModeMediaQuery: false,
   themeCssSelector: false,
   minSyntaxHighlightingColorContrast: 4.5,
-  plugins: [pluginLineNumbers(), pluginLanguageLabel()],
+  plugins: [pluginLineNumbers(), pluginLanguageLabel(), pluginRegionName()],
   defaultProps: { wrap: false },
   styleOverrides: {
     borderRadius: '0',

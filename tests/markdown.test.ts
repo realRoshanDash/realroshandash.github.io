@@ -45,6 +45,14 @@ describe('wrapTables', () => {
     assert.equal(html.match(/table-scroll/g)?.length, 1);
   });
 
+  test('several tables get regions that tell them apart (axe landmark-unique)', async () => {
+    const table = '| A | B |\n| --- | --- |\n| 1 | 2 |\n';
+    const html = await render(`${table}\nText.\n\n${table}\nMore.\n\n${table}`);
+    assert.deepEqual([...html.matchAll(/aria-label="([^"]+)"/g)].map((m) => m[1]), ['Table 1', 'Table 2', 'Table 3']);
+    // the count restarts for every document
+    assert.match(await render(table), /aria-label="Table"/);
+  });
+
   test('a document without tables is untouched', async () => {
     assert.equal((await render('Just text.\n')).trim(), '<p>Just text.</p>');
   });

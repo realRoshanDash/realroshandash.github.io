@@ -3,10 +3,11 @@
  * Contact (design spec §5.8, copy §7.6): the lead statement beside the proof-of-work gate and its channels, with
  * "How this works" as the gate's legend. The address ships only as ciphertext (src/data/contact.sealed.json): the
  * gate — the same component and engine as on Home — decrypts it in the browser after a short SHA-256
- * proof-of-work. `/contact/?verify=1` (the ⌘K action "Verify and reveal email") starts the gate once.
+ * proof-of-work. `/contact/?verify=1#contact-gate` (the ⌘K action "Verify and reveal email", About's fact sheet)
+ * starts the gate once and lands on it, so the address it reveals is in view.
  */
 import Base from '@/layouts/Base.astro';
-import PageHead from '@/components/about/PageHead.astro';
+import PageHead from '@/components/layout/PageHead.astro';
 import ContactGate from '@/components/contact/ContactGate.astro';
 import HowItWorks from '@/components/contact/HowItWorks.astro';
 import { SITE } from '@/data/site';

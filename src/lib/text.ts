@@ -236,12 +236,17 @@ export function excerpt(md: string, maxChars = 160): string {
   return truncate(markdownToPlain(md), maxChars);
 }
 
-/** Words (whitespace-separated tokens with a letter or digit) and minutes at ~230 wpm, at least 1. */
+/** Words (whitespace-separated tokens with a letter or digit) and minutes: ceil(words / 230), at least 1 (spec §4.12). */
 export function readingTime(md: string): { minutes: number; words: number } {
   const words = markdownToPlain(md, { keepCode: true })
     .split(/\s+/)
     .filter((token) => /[\p{L}\p{N}]/u.test(token)).length;
-  return { minutes: Math.max(1, Math.round(words / WORDS_PER_MINUTE)), words };
+  return { minutes: Math.max(1, Math.ceil(words / WORDS_PER_MINUTE)), words };
+}
+
+/** A post's reading time in whole minutes, as every list, card, palette row and share image shows it ("9 min"). */
+export function minutesToRead(body: string | undefined): number {
+  return readingTime(body ?? '').minutes;
 }
 
 /**

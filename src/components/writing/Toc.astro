@@ -88,10 +88,12 @@ const { items, variant, rss } = Astro.props;
     display: grid; gap: 18px;
   }
   .toc__title { padding-bottom: 10px; }
-  /* the list hangs 12px into the gutter so the active bar sits outside the text column */
+  /* The list hangs 12px into the gutter so the active bar sits outside the text column. A long list scrolls on
+     its own; at its ends (and when it doesn't overflow at all) the wheel and the keys scroll the page, so no
+     overscroll containment: that would trap the wheel over the list, and End/Space/PageDown after a click on it. */
   .toc .toc__list {
     margin-left: -12px; border-top: 1px solid var(--rule);
-    max-height: calc(100svh - var(--nav-h) - 240px); overflow-y: auto; overscroll-behavior: contain;
+    max-height: calc(100svh - var(--nav-h) - 240px); overflow-y: auto;
     scrollbar-width: thin;
   }
   .toc__read { display: flex; align-items: center; gap: 12px; }

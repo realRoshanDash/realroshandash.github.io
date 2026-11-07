@@ -104,6 +104,7 @@ entry's folder (`cover: cover.webp`).
 | `tags` | list | Defaults to `[]`. |
 | `cover`, `coverAlt` | image, text | Optional cover image and its alt text. |
 | `featured` | boolean | Defaults to `false`. |
+| `archived` | boolean | Optional. Marks a post restored from the old site (“From the archive”). Unset, posts published before 2025 count as archived. |
 | `draft` | boolean | Defaults to `false`. New entries from the CMS and the scaffolds start as `true`. |
 
 ```yaml
@@ -129,8 +130,9 @@ draft: false
 | `link` | URL | The page the note is about, if any. |
 | `draft` | boolean | As for posts. |
 
-Sections without published entries (notes, trade ideas) stay out of the navigation and generate
-no pages until the first entry is published.
+Sections without published entries (notes, trade ideas) generate no pages until the first entry
+is published. Even then neither joins the header: notes get a "Notes" chip in the Writing index,
+trade ideas a link in the footer index.
 
 <details>
 <summary><strong>Trade ideas (dormant): <code>src/content/trades/</code></strong></summary>
@@ -221,6 +223,19 @@ git add src/data/contact.sealed.json && git commit -m "contact: update card" && 
 `public/.well-known/security.txt` expires after a year. CI starts warning 30 days before
 the date, so move `Expires` ahead when that happens.
 
+**Content-Security-Policy.** GitHub Pages can't send response headers, so every page Astro
+builds carries its policy as a `<meta http-equiv="Content-Security-Policy">`, placed straight after
+`<meta charset>` so it covers everything after it. `src/integrations/csp.ts` adds it at the end of
+`astro build`: it hashes exactly the inline scripts (the theme bootstrap among them), `<style>`
+elements and `style=""` attributes each page has, so no directive needs `'unsafe-inline'`, and the
+hashes can't go stale. The rest is fixed: `default-src 'self'`, `script-src 'self'
+'wasm-unsafe-eval'` (Pagefind), `img-src 'self' data:`, `font-src`/`connect-src`/`worker-src
+'self'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self' mailto:`. A component that
+needs more declares it with a `data-csp` attribute, which only widens the pages it is on (the
+dormant trade pages' click-to-load chart). Files in `public/` (the CMS, old-URL redirects) are
+left alone. `npm run dev` has no policy; check changes with `npm run build && npm run preview`.
+A meta tag can't set `frame-ancestors` or reporting, so those need a host that sends headers.
+
 **Content guard.** `npm run build` ends with `scripts/content-guard.mjs`, which scans every text
 file in `dist/` and `public/` (HTML, feeds, YAML, JSON, JS…) and fails the build on trading or
 market words, the private project, a plaintext address on the domain, or a `mailto:` link in markup.
@@ -234,6 +249,7 @@ src/content.config.ts   schemas for the collections
 src/data/site.ts        name, URL, socials, navigation
 src/pages/              routes (including robots.txt.ts and the RSS feeds)
 public/                 copied as-is: admin/ (CMS), .well-known/, old-URL redirects
+src/integrations/       build steps: csp.ts (per-page Content-Security-Policy), prune-unused-css.ts
 scripts/                new-entry.mjs (scaffolds), seal-contact.mjs (contact card), content-guard.mjs
 ```
 

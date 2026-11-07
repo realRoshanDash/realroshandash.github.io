@@ -337,6 +337,16 @@ export function levelCells(t: TradeLevels & Pick<TradeLike, 'targets'>): { entry
   return { entry: { price: formatPrice(t.entry) }, stop: cell(t.stop), targets: t.targets.map(cell) };
 }
 
+/**
+ * An idea's number ("No. 001" is the oldest), from the one ordering every page uses: `newestFirst` as getTrades()
+ * returns it (newest published first, ties by id). Same-day ideas therefore get the same number on their card and
+ * on their own page. 0 when `id` isn't in the list.
+ */
+export function tradeNumber(newestFirst: readonly { id: string }[], id: string): number {
+  const i = newestFirst.findIndex((trade) => trade.id === id);
+  return i < 0 ? 0 : newestFirst.length - i;
+}
+
 /** TradingView's page for a symbol, for the no-script link: NASDAQ:NVDA → /symbols/NASDAQ-NVDA/. */
 export function tradingViewUrl(symbol: string): string {
   return `https://www.tradingview.com/symbols/${encodeURIComponent(symbol.replace(':', '-'))}/`;

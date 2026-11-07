@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { escapeHtml, excerpt, markdownToPlain, readingTime, slugify, truncate } from '../src/lib/text.ts';
+import { escapeHtml, excerpt, markdownToPlain, minutesToRead, readingTime, slugify, truncate } from '../src/lib/text.ts';
 
 describe('markdownToPlain', () => {
   test('headings, emphasis and strikethrough keep their text', () => {
@@ -167,9 +167,13 @@ describe('readingTime', () => {
     assert.deepEqual(readingTime(''), { minutes: 1, words: 0 });
   });
 
-  test('about 230 words per minute', () => {
+  test('about 230 words per minute, rounded up (spec §4.12): every list, card and share image agrees', () => {
     assert.deepEqual(readingTime(words(460)), { minutes: 2, words: 460 });
     assert.equal(readingTime(words(1150)).minutes, 5);
+    assert.equal(readingTime(words(231)).minutes, 2);
+    assert.equal(readingTime(words(1151)).minutes, 6);
+    assert.equal(minutesToRead(words(231)), 2);
+    assert.equal(minutesToRead(undefined), 1);
   });
 
   test('counts code, not markup or bare punctuation', () => {

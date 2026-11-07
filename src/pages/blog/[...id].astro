@@ -6,7 +6,7 @@
  * dev and SHOW_DRAFTS=1 previews (noindex, with a DRAFT badge).
  */
 import { render } from 'astro:content';
-import { getImage, Image, Picture } from 'astro:assets';
+import { Image, Picture } from 'astro:assets';
 import Base from '@/layouts/Base.astro';
 import Toc, { type TocItem } from '@/components/writing/Toc.astro';
 import BackPage from '@/components/writing/BackPage.astro';
@@ -15,6 +15,7 @@ import PullQuote from '@/components/writing/PullQuote.astro';
 import avatar from '@/assets/avatar.jpg';
 import { getPostItems, jsonLd, WRITING_FEED, type PostItem } from '@/components/writing/posts';
 import { absoluteUrl, adjacent, related } from '@/lib/content';
+import { ogImageFor } from '@/lib/og';
 import { linkTo } from '@/lib/routes';
 import { lsbStyle } from '@/lib/optical';
 import { SITE } from '@/data/site';
@@ -65,7 +66,9 @@ const contact = linkTo('/contact/', '/#contact');
 
 // Cover: 16:10, or 4:5 for an upright photo, which would otherwise lose most of the frame
 const upright = cover ? cover.height > cover.width : false;
-const ogImage = cover ? (await getImage({ src: cover, width: 1200, height: 630, fit: 'cover', format: 'jpg', quality: 80 })).src : undefined;
+// The share image is the post's own generated card (spec §6.4: /og/blog/<id>.png), cover or not; Base picks it
+// up from src/lib/og.ts, and the structured data names the same file.
+const shareCard = await ogImageFor(item.href);
 
 const url = absoluteUrl(item.href);
 const ld = {
@@ -80,11 +83,11 @@ const ld = {
   inLanguage: SITE.lang,
   author: { '@type': 'Person', name: SITE.name, url: SITE.url },
   ...(item.tags.length ? { keywords: item.tags.map((tag) => tag.label).join(', ') } : {}),
-  ...(ogImage ? { image: absoluteUrl(ogImage) } : {}),
+  image: absoluteUrl(shareCard.src),
 };
 ---
 
-<Base title={title} description={description} type="article" image={ogImage} progress noindex={item.draft}>
+<Base title={title} description={description} type="article" progress noindex={item.draft}>
   <Fragment slot="head">
     <meta property="article:published_time" content={item.iso} />
     {item.updatedIso && <meta property="article:modified_time" content={item.updatedIso} />}
@@ -93,7 +96,9 @@ const ld = {
     <script type="application/ld+json" set:html={jsonLd(ld)} />
   </Fragment>
 
-  <article class="post" data-pagefind-body>
+  {/* Search indexes Base's <main> (a draft preview is noindex, so it stays out); the meta and filters below
+      feed it. */}
+  <article class="post">
     <header class="post-head wrap">
       <div class="post-head__top" data-pagefind-ignore>
         <nav class="crumb" aria-label="Breadcrumb">

@@ -22,14 +22,17 @@ export const SITE = {
   repo: 'roshandash411/roshandash411.github.io',
 } as const;
 
+/** The portrait's alt text (design spec §6.1), wherever the photo appears: the hero plate and the About plate. */
+export const PORTRAIT_ALT = `Black-and-white portrait of ${SITE.name}, head and shoulders, in a dark polo shirt.`;
+
 export const SOCIALS = [
   { label: 'GitHub', handle: 'roshandash411', href: 'https://github.com/roshandash411' },
   { label: 'LinkedIn', handle: 'roshan-dash', href: 'https://www.linkedin.com/in/roshan-dash' },
 ] as const;
 
 /**
- * Primary navigation (the logo links home). The site is professional-only: sections that have
- * no published entries (e.g. trade ideas, notes) stay out of the nav until something is published.
+ * Primary navigation (the logo links home). The site is professional-only: the dormant sections never join it
+ * (trade ideas reach the footer index once published, notes a chip in the Writing index; src/lib/nav.ts).
  * `anchor` is the matching section on the home page; links use it until `href`'s page is built
  * (see src/lib/routes.ts), so the nav never points at a page that doesn't exist yet.
  */
@@ -44,6 +47,12 @@ export const NAV = [
  * entry or shortcut hint is rendered, so the chrome never offers a control that does nothing.
  */
 export const HAS_PALETTE = true;
+
+/**
+ * The dormant trade ideas, once published, are linked from the footer index only (design spec §4.21). True would
+ * also list them in the header and the mobile menu. Off: the site is professional only.
+ */
+export const SHOW_TRADES_IN_NAV: boolean = false;
 
 export const TRADE_DISCLAIMER =
   'Trade ideas are personal notes and opinions for educational purposes — not financial advice. I may hold positions in the instruments discussed. Do your own research; markets can and do go against you.';

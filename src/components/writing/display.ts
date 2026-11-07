@@ -6,16 +6,18 @@
  *   the numbers of published posts, and a draft shows the en dash, "no value" (spec §4.12, §4.19).
  * - Reading time: ceil(words / 230), at least 1, shown as "9 min".
  */
-import { readingTime, slugify } from '../../lib/text.ts';
+import { slugify } from '../../lib/text.ts';
 
-const WORDS_PER_MINUTE = 230;
+/** Reading time in whole minutes: ceil(words / 230), at least 1 (spec §4.12). One implementation, in src/lib/text.ts. */
+export { minutesToRead } from '../../lib/text.ts';
 
 /** "In a table, an en dash means “no value”." (spec §4.19) */
 export const NO_VALUE = '–';
 
 /**
  * Posts published before this version of the site are restored from the previous one (the 2021 archive): they
- * carry the FROM THE ARCHIVE badge in lists and the archive note on the page (copy deck §7.4).
+ * carry the FROM THE ARCHIVE badge in lists and the archive note on the page (copy deck §7.4). A post's own
+ * `archived` frontmatter, when set, decides instead (a new post backdated before 2025 is not from the archive).
  */
 export const ARCHIVE_BEFORE_YEAR = 2025;
 
@@ -25,11 +27,6 @@ export interface TagRef {
   slug: string;
   /** The tag's page, /blog/tags/<slug>/ */
   href: string;
-}
-
-/** Reading time in whole minutes: ceil(words / 230), at least 1 (spec §4.12). */
-export function minutesToRead(body: string | undefined): number {
-  return Math.max(1, Math.ceil(readingTime(body ?? '').words / WORDS_PER_MINUTE));
 }
 
 /**

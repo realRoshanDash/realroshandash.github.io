@@ -13,7 +13,7 @@ import type { OgCard } from './og-render.ts';
 import { SITE } from '../data/site.ts';
 import { entryPath, getPosts, getTags, hasTag } from './content.ts';
 import { formatDateISO, pluralize } from './format.ts';
-import { readingTime, truncate } from './text.ts';
+import { minutesToRead, truncate } from './text.ts';
 
 export interface OgImage {
   /** Endpoint param: "default", "about", "blog/tags/java", "blog/<post-id>"… */
@@ -37,9 +37,6 @@ const image = (slug: string, alt: string, card: OgCard, page?: string): OgImage 
   page,
   card,
 });
-
-/** Same arithmetic as the Writing list on Home: 230 words a minute, rounded up. */
-const minutes = (body: string | undefined) => Math.max(1, Math.ceil(readingTime(body ?? '').words / 230));
 
 async function build(): Promise<OgImage[]> {
   const posts = await getPosts();
@@ -89,7 +86,7 @@ async function build(): Promise<OgImage[]> {
         kind: 'post',
         title: post.data.title,
         no: oldestFirst.indexOf(post) + 1,
-        minutes: minutes(post.body),
+        minutes: minutesToRead(post.body),
         date: formatDateISO(post.data.published),
         tags: post.data.tags,
         draft: post.data.draft,

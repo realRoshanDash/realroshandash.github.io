@@ -23,6 +23,12 @@
 @keyframes vt-in { from { opacity: 0; transform: translateY(8px); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Each grid line's stagger index (--i, 0–11) is its position. */
+.gridlines i:nth-child(2) { --i: 1; } .gridlines i:nth-child(3) { --i: 2; } .gridlines i:nth-child(4) { --i: 3; }
+.gridlines i:nth-child(5) { --i: 4; } .gridlines i:nth-child(6) { --i: 5; } .gridlines i:nth-child(7) { --i: 6; }
+.gridlines i:nth-child(8) { --i: 7; } .gridlines i:nth-child(9) { --i: 8; } .gridlines i:nth-child(10) { --i: 9; }
+.gridlines i:nth-child(11) { --i: 10; } .gridlines i:nth-child(12) { --i: 11; }
+
 /* Load sequence: first page view of a session only (the head script adds html.intro-seen afterwards).
    Every element is already in its final position; these only draw decorative marks. Under reduced motion they don't
    run at all (§3.7: no dash draw, the lines are simply present): shortening the duration alone would still leave the

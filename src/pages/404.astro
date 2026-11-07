@@ -61,7 +61,11 @@ const contact = linkTo('/contact/', '/#contact');
     vertical-align: 0.27em;
     background: var(--signal);
     transform-origin: left center;
-    animation: dash-draw var(--dur-6) var(--ease-out) 120ms both;
+  }
+  /* Motion rules (§3.2–3.3): the cinematic draw belongs to Home, so here the dash draws in 600 ms, on a session's
+     first page only; under reduced motion it is simply there. */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html:not(.intro-seen)) .nf__code::after { animation: dash-draw var(--dur-5) var(--ease-out) both; }
   }
 
   .nf__title { margin-top: clamp(20px, 2.4vw, 36px); }
