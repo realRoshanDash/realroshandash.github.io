@@ -4,7 +4,7 @@ import Base from '@/layouts/Base.astro';
 import { SITE, SOCIALS } from '@/data/site';
 import cutout from '@/assets/portrait-cutout.png';
 
-const tape = ['Java', 'Distributed systems', 'System design', 'Databases', 'Backend engineering', 'Software architecture', 'IIT Guwahati', 'Singapore'];
+const tape = ['Java', 'Distributed systems', 'System design', 'Databases', 'AI agents', 'Agentic workflows', 'Backend engineering', 'IIT Guwahati', 'Singapore'];
 const year = new Date().getFullYear();
 ---
 
@@ -40,7 +40,7 @@ const year = new Date().getFullYear();
         <figure class="portrait reveal-up" style="--d: 220ms">
           <Image
             src={cutout}
-            alt="Roshan Dash in a navy blazer, smiling"
+            alt="Black-and-white portrait of Roshan Dash"
             widths={[380, 560, 760]}
             sizes="(max-width: 760px) 92vw, 560px"
             loading="eager"
@@ -53,7 +53,8 @@ const year = new Date().getFullYear();
           <p class="lede serif">Software engineer.<br />Building systems that <em>scale</em>.</p>
           <p class="sub">
             Backend engineer in {SITE.location}, working across Java, distributed systems, databases and
-            system design. {SITE.alumni} alumnus.
+            system design — and leaning hard on AI, with agents and agentic workflows built into how I
+            design, build and ship. {SITE.alumni} alumnus.
           </p>
           <div class="ctas">
             <a class="btn btn-primary" href="#writing">Read my writing <span aria-hidden="true">→</span></a>
@@ -83,8 +84,8 @@ const year = new Date().getFullYear();
       <div class="bento">
         <article class="card card-lg" data-spot>
           <p class="mono num">01 — Writing</p>
-          <h3>Essays on engineering</h3>
-          <p>Long-form notes on distributed systems, Java, databases and system design — design decisions, failure modes and lessons from building backend software.</p>
+          <h3>Essays on engineering &amp; AI</h3>
+          <p>Long-form notes on distributed systems, Java, databases and system design — and on building with AI agents: what works, what breaks, and how it changes the way software gets made.</p>
           <p class="mono state"><span class="dot dot-amber"></span>First essays in the works</p>
         </article>
         <article class="card card-md" data-spot>
@@ -94,10 +95,15 @@ const year = new Date().getFullYear();
             {SITE.expertise.map((e) => <li>{e}</li>)}
           </ul>
         </article>
-        <article id="about" class="card card-wide" data-spot>
-          <p class="mono num">03 — About</p>
+        <article class="card card-md" data-spot>
+          <p class="mono num">03 — AI-native</p>
+          <h3>AI, <span class="serif"><em>to the maximum</em></span></h3>
+          <p>Coding agents and agentic workflows are part of how I design, build, review and ship software — I use AI wherever it makes the work better and faster.</p>
+        </article>
+        <article id="about" class="card card-lg" data-spot>
+          <p class="mono num">04 — About</p>
           <h3>Software engineer, <span class="serif"><em>{SITE.alumni}</em></span> alumnus</h3>
-          <p>Based in {SITE.location} 🇸🇬, designing and building backend and distributed systems.</p>
+          <p>Based in {SITE.location} 🇸🇬, designing and building backend and distributed systems. Off the clock: {SITE.interests.join(', ').toLowerCase().replace(/, ([^,]*)$/, ' and $1')}.</p>
         </article>
       </div>
     </section>
@@ -152,8 +158,8 @@ const year = new Date().getFullYear();
   .name .line-2 { padding-left: 0.42em; background: linear-gradient(180deg, rgb(246 244 238 / 0.9), rgb(246 244 238 / 0.18)); -webkit-background-clip: text; background-clip: text; }
 
   .portrait { position: absolute; z-index: 2; margin: 0; right: max(0px, calc(50% - 38rem)); bottom: 0; width: clamp(18rem, 40vw, 35rem); pointer-events: none; }
-  .portrait::before { content: ''; position: absolute; inset: 18% 8% 10%; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, rgb(200 245 80 / 0.22), transparent 70%); filter: blur(30px); }
-  .portrait :global(img) { width: 100%; height: auto; -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 98%); mask-image: linear-gradient(180deg, #000 72%, transparent 98%); filter: drop-shadow(0 30px 60px rgb(0 0 0 / 0.55)); }
+  .portrait::before { content: ''; position: absolute; inset: 10% 6% 12%; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, rgb(220 225 235 / 0.16), transparent 72%); filter: blur(34px); }
+  .portrait :global(img) { width: 100%; height: auto; -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent 98%), linear-gradient(270deg, transparent 0, #000 14%); -webkit-mask-composite: source-in; mask-image: linear-gradient(180deg, #000 70%, transparent 98%), linear-gradient(270deg, transparent 0, #000 14%); mask-composite: intersect; filter: drop-shadow(0 30px 60px rgb(0 0 0 / 0.55)); }
 
   .intro { position: relative; z-index: 3; align-self: end; max-width: 34rem; margin-top: 2.5rem; }
   .lede { margin: 0 0 1rem; font-size: clamp(2.2rem, 4vw, 3.6rem); line-height: 0.98; }

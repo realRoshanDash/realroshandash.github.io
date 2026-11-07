@@ -11,13 +11,14 @@ export const SITE = {
   /** Default <title> suffix and OG site name. */
   title: 'Roshan Dash',
   description:
-    'Roshan Dash — software engineer in Singapore working on distributed systems, Java, databases and system design. Writing on engineering and the craft of building software.',
+    'Roshan Dash — software engineer in Singapore working on distributed systems, Java, databases and system design, with AI agents and agentic workflows at the core of how he builds.',
   locale: 'en-SG',
   lang: 'en',
   location: 'Singapore',
   timezone: 'Asia/Singapore',
   alumni: 'IIT Guwahati',
-  expertise: ['Java', 'Distributed systems', 'Databases', 'System design', 'Backend engineering'],
+  expertise: ['Java', 'Distributed systems', 'Databases', 'System design', 'Backend engineering', 'AI agents', 'Agentic workflows'],
+  interests: ['Reading', 'Photography', 'Travel'],
   repo: 'roshandash411/roshandash411.github.io',
 } as const;
 
