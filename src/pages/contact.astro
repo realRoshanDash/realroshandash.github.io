@@ -1,0 +1,44 @@
+---
+/**
+ * Contact (design spec §5.8, copy §7.6): the lead statement beside the proof-of-work gate and its channels, with
+ * "How this works" as the gate's legend. The address ships only as ciphertext (src/data/contact.sealed.json): the
+ * gate — the same component and engine as on Home — decrypts it in the browser after a short SHA-256
+ * proof-of-work. `/contact/?verify=1` (the ⌘K action "Verify and reveal email") starts the gate once.
+ */
+import Base from '@/layouts/Base.astro';
+import PageHead from '@/components/about/PageHead.astro';
+import ContactGate from '@/components/contact/ContactGate.astro';
+import HowItWorks from '@/components/contact/HowItWorks.astro';
+import { SITE } from '@/data/site';
+
+const description = `Get in touch with ${SITE.name}. The email address is encrypted on the page; your browser decrypts it after a short proof-of-work — about a second, no tracking.`;
+---
+
+<Base title="Contact" description={description}>
+  <PageHead route="/contact" title="Contact">
+    <p>My email is encrypted on this page. Your browser decrypts it after a short <span class="nw">proof-of-work</span>&nbsp;— about a second, no tracking.</p>
+  </PageHead>
+
+  <div class="wrap g contact" id="contact">
+    <p class="t-statement contact__lead">Questions about backend systems, distributed systems or building with AI agents? <span class="mute">Write to me&nbsp;— the inbox is one small proof away.</span></p>
+    <div class="contact__gate"><ContactGate /></div>
+    <div class="contact__how"><HowItWorks /></div>
+  </div>
+</Base>
+
+<style>
+  .nw { white-space: nowrap; }
+
+  /* Desktop: the lead (cols 1–6) and, under it, "How this works" — the legend beside the instrument: the gate
+     and its channels (cols 8–12). The gate spans both rows; the second row takes its extra height, so the
+     legend sits right under the lead. Stacked below 1024px in reading order: lead → gate → channels → legend. */
+  .contact { grid-template-rows: auto 1fr; align-items: start; row-gap: var(--stack); padding-block: var(--stack) var(--section-pad); }
+  .contact__lead { grid-column: 1 / 7; grid-row: 1; }
+  .contact__gate { grid-column: 8 / 13; grid-row: 1 / span 2; }
+  .contact__how { grid-column: 1 / 6; grid-row: 2; }
+
+  @media (width < 1024px) {
+    .contact { grid-template-rows: none; }
+    .contact__lead, .contact__gate, .contact__how { grid-column: 1 / -1; grid-row: auto; }
+  }
+</style>
