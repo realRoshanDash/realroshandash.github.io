@@ -1,0 +1,228 @@
+---
+/**
+ * ⌘K command palette (design spec §4.5): a native modal <dialog> — the page behind is inert and focus stays
+ * inside — with a combobox, a grouped listbox of pages, writing, actions and profiles, a preview pane on wide
+ * screens, and full-text results from Pagefind. Mounted once by Base.astro.
+ *
+ * Opens on ⌘K / Ctrl+K, "/" (outside text fields; can be turned off from the palette, WCAG 2.1.4) and every
+ * [data-open-palette] button. This shell is server-rendered so it opens instantly; src/scripts/palette.ts is
+ * loaded on first use and fills it. Rows are built at runtime, so the styles below are global (all .palette*).
+ */
+import Icon from '@/components/ui/Icon.astro';
+import { getPaletteData } from './palette-data';
+
+const data = await getPaletteData();
+// JSON inside <script>: escape "<" so no string in the data can close the element.
+const json = JSON.stringify(data).replace(/</g, '\\u003c');
+const enter = 'M13 3.5V9H3.5M6.5 6 3.5 9l3 3';
+---
+
+<dialog class="palette" id="palette" aria-label="Search and commands" data-palette data-pagefind-ignore="all">
+  <div class="palette__in">
+    <Icon name="search" size={18} class="palette__icon" />
+    <input
+      class="palette__input"
+      id="palette-input"
+      type="text"
+      role="combobox"
+      aria-expanded="true"
+      aria-controls="palette-list"
+      aria-autocomplete="list"
+      aria-label="Search writing, pages and actions"
+      placeholder="Search writing, pages and actions…"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      enterkeyhint="go"
+      autofocus
+      data-palette-input
+    />
+    <!-- Name "Esc Close" where the key shows, "Close" on phones: the visible text is always in the name (WCAG 2.5.3). -->
+    <button class="palette__close" type="button" data-palette-close>
+      <kbd class="palette__esc">Esc</kbd>{' '}<span class="palette__close-text">Close</span>
+    </button>
+  </div>
+  <div class="palette__body">
+    <div class="palette__results">
+      <p class="palette__note label" data-palette-note hidden>Full-text search unavailable.</p>
+      <div class="palette__list" id="palette-list" role="listbox" aria-label="Results" data-palette-list></div>
+      <div class="palette__empty" data-palette-empty hidden>
+        <p class="palette__empty-title" data-palette-empty-title></p>
+        <p class="palette__empty-hint" data-palette-empty-hint></p>
+      </div>
+    </div>
+    <div class="palette__preview" aria-hidden="true" data-palette-preview>
+      <p class="palette__p-route" data-p-route></p>
+      <p class="palette__p-title" data-p-title></p>
+      <p class="palette__p-desc" data-p-desc></p>
+      <p class="palette__p-meta label" data-p-meta></p>
+    </div>
+  </div>
+  <div class="palette__foot label">
+    <span class="palette__hints">
+      <span class="palette__hint"><kbd>↑</kbd><kbd>↓</kbd> Move</span>
+      <span class="palette__hint">
+        <kbd><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" aria-hidden="true" focusable="false"><path d={enter}></path></svg><span class="sr-only">Enter</span></kbd> Open
+      </span>
+      <span class="palette__hint palette__hint--tab">
+        <kbd data-palette-mod>Ctrl</kbd><kbd><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" aria-hidden="true" focusable="false"><path d={enter}></path></svg><span class="sr-only">Enter</span></kbd> New tab
+      </span>
+      <span class="palette__hint"><kbd>Esc</kbd> Close</span>
+    </span>
+    <span class="palette__count" data-palette-count></span>
+  </div>
+  <p class="sr-only" aria-live="polite" data-palette-live></p>
+  <script type="application/json" data-palette-data set:html={json} />
+</dialog>
+
+<style is:global>
+  /* ---- shell: a native modal dialog in the top layer (no z-index), flat, square, one hairline frame ---- */
+  .palette {
+    width: min(880px, calc(100% - 2 * var(--margin)));
+    max-width: none;
+    max-height: min(560px, 80svh);
+    margin: 12vh auto auto;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--rule-2);
+    background: var(--bg);
+    color: var(--fg);
+    box-shadow: var(--shadow-pop);
+  }
+  .palette[open] { display: flex; flex-direction: column; animation: palette-in 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+  /* Solid scrim, no blur. Literal colours: older engines don't inherit custom properties into ::backdrop. */
+  .palette::backdrop { background: rgb(5 5 6 / 0.74); }
+  :root[data-theme='light'] .palette::backdrop { background: rgb(242 241 236 / 0.82); }
+  .palette[open]::backdrop { animation: fade-in 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes palette-in { from { opacity: 0; transform: translateY(-8px); } }
+  @media (prefers-reduced-motion: reduce) {
+    .palette[open], .palette[open]::backdrop { animation: none; }
+  }
+
+  /* ---- input row ---- */
+  .palette__in {
+    flex: none;
+    display: flex; align-items: center; gap: 12px;
+    height: 60px; padding: 0 10px 0 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .palette__icon { flex: none; color: var(--fg-3); }
+  .palette__input {
+    flex: 1; min-width: 0; height: 100%;
+    border: 0; background: none; outline: none;
+    font-size: 18px; letter-spacing: -0.015em; color: var(--fg);
+  }
+  .palette__input::placeholder { color: var(--fg-3); opacity: 1; }
+  /* The caret is the input's focus mark (no ring around the whole field); the hairline under the row
+     strengthens while it has focus. */
+  .palette__input:focus-visible { outline: none; }
+  .palette__in:has(.palette__input:focus-visible) { border-bottom-color: var(--rule-2); }
+  .palette__close {
+    flex: none; position: relative;
+    display: inline-grid; place-items: center;
+    min-width: 44px; height: 44px;
+    color: var(--fg-2);
+  }
+  .palette__close kbd { transition: border-color var(--dur-2) linear, color var(--dur-2) linear; }
+  .palette__close:hover kbd { border-color: var(--fg); color: var(--fg); }
+  .palette__close-text {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    font-size: 14px; font-weight: 550;
+  }
+
+  /* ---- results and preview ---- */
+  .palette__body {
+    flex: 1 1 auto; min-height: 0;
+    display: grid; grid-template-columns: 56fr 44fr;
+    /* a fixed height while typing: the dialog never jumps as results come and go */
+    height: min(420px, 56svh);
+  }
+  .palette__results { min-height: 0; display: flex; flex-direction: column; }
+  .palette__note { flex: none; padding: 12px 16px 0; }
+  .palette__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 0; }
+  .palette__list:empty { display: none; }
+  .palette__group { padding: 10px 16px 6px; }
+  .palette__item {
+    display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+    min-height: 44px; padding: 8px 16px 8px 14px;
+    border-left: 2px solid transparent;
+    font-size: 15px; line-height: 1.35; color: var(--fg);
+    cursor: pointer;
+    user-select: none; -webkit-user-select: none;
+  }
+  .palette__item[aria-selected='true'] { background: var(--bg-raised); border-left-color: var(--signal-ui); }
+  .palette__n { font-size: 12px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  .palette__main { min-width: 0; display: grid; }
+  .palette__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .palette__label .icon { display: inline-block; width: 12px; height: 12px; margin-left: 6px; vertical-align: 0.05em; color: var(--fg-3); }
+  /* the excerpt: read by screen readers everywhere, shown under the label where there is no preview pane */
+  .palette__sub {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .palette__meta { max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  .palette__meta--route { font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--fs-mono-s); letter-spacing: 0; }
+  .palette mark { background: none; color: inherit; box-shadow: inset 0 -2px 0 var(--signal-ui); }
+
+  .palette__empty { padding: 24px 16px; display: grid; gap: 6px; }
+  .palette__empty-title { font-size: 15px; color: var(--fg); }
+  .palette__empty-hint { font-size: 14px; line-height: 1.5; color: var(--fg-2); }
+
+  .palette__preview {
+    min-width: 0; overflow: hidden;
+    display: grid; align-content: start; gap: 10px;
+    padding: 20px;
+    border-left: 1px solid var(--rule);
+  }
+  .palette__p-route { font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--fs-mono-s); color: var(--fg-3); overflow-wrap: anywhere; }
+  .palette__p-title { font-size: 20px; font-weight: 650; line-height: 1.2; letter-spacing: -0.02em; text-wrap: balance; }
+  .palette__p-desc { font-size: 15px; line-height: 1.5; color: var(--fg-2); }
+  .palette__p-meta:empty, .palette__p-desc:empty, .palette__p-route:empty { display: none; }
+  .palette[data-empty] .palette__preview { visibility: hidden; }
+
+  /* ---- footer ---- */
+  .palette__foot {
+    flex: none;
+    display: flex; align-items: center; gap: 18px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--rule);
+  }
+  .palette__hints { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  .palette__hint { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .palette kbd { min-width: 22px; padding: 3px 5px; line-height: 1; text-transform: none; letter-spacing: 0.02em; }
+  .palette kbd .icon { display: inline-block; width: 12px; height: 12px; vertical-align: -2px; }
+  .palette__hint kbd + kbd { margin-left: -2px; }
+  .palette__count { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  /* ---- below 900px: list only, the excerpt moves under the label ---- */
+  @media (width < 900px) {
+    .palette { width: min(640px, calc(100% - 2 * var(--margin))); }
+    .palette__body { grid-template-columns: minmax(0, 1fr); }
+    .palette__preview { display: none; }
+    .palette__sub {
+      position: static; width: auto; height: auto; clip-path: none;
+      overflow: hidden; text-overflow: ellipsis;
+      font-size: 13px; line-height: 1.45; color: var(--fg-2);
+    }
+  }
+  /* ---- phones: full screen; a "Close" button instead of the Esc key; no keyboard hints ---- */
+  @media (width < 640px) {
+    .palette { width: 100%; height: 100svh; max-height: none; margin: 0; border: 0; box-shadow: none; }
+    .palette__body { height: auto; }
+    .palette__in { height: var(--nav-h); padding-right: 8px; }
+    /* 16px: the full placeholder fits at 390px, and iOS doesn't zoom into the field */
+    .palette__input { font-size: 16px; text-overflow: ellipsis; }
+    .palette__esc { display: none; }
+    .palette__close-text { position: static; width: auto; height: auto; overflow: visible; clip-path: none; padding: 0 8px; }
+    .palette__meta { max-width: 36vw; }
+    .palette__foot { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  }
+  @media (hover: none) and (pointer: coarse) {
+    .palette__hints { display: none; }
+    .palette__foot:has(.palette__count:empty) { display: none; }
+  }
+  @media print { .palette { display: none !important; } }
+</style>
+
+<script>
+  import '@/scripts/palette-boot.ts';
+</script>

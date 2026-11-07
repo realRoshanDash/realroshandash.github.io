@@ -1,0 +1,6 @@
+# Pagefind (site search for the ⌘K palette), run by `npm run build` after `astro build`.
+# Base.astro marks <main> with data-pagefind-body, so header, footer and palette stay out of the index.
+# Decorative markup that screen readers skip is skipped by search too: column rulers, section numerals,
+# separators, the empty-state dashes, the gate's readout.
+exclude_selectors:
+  - '[aria-hidden="true"]'
