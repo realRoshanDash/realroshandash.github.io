@@ -1,0 +1,394 @@
+---
+/**
+ * Captcha-gated contact card (design spec §4.15 gate + §4.16 channels). The details ship only as ciphertext
+ * (src/data/contact.sealed.json); the visitor's browser solves a short SHA-256 proof-of-work to derive the key
+ * and decrypt them. The readouts come straight from the solver's progress, so the instrumentation is honest.
+ * Regenerate the sealed card with `npm run seal-contact` (see README).
+ *
+ * Contract (script + e2e): [data-gate][data-state="idle|verifying|verified|error|unsupported"] (+ [data-cached]),
+ * [data-start], [data-label], [data-progress] > [data-bar], [data-stats], [data-fields] (first <dd> = email),
+ * [data-mailto], [data-copy], [data-live].
+ */
+import Icon from '@/components/ui/Icon.astro';
+import sealed from '@/data/contact.sealed.json';
+import { SOCIALS } from '@/data/site';
+
+interface Props {
+  id?: string;
+}
+const { id = 'contact-gate' } = Astro.props;
+const bits = sealed.difficulty;
+const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in/roshan-dash' };
+---
+
+<div class="contact-card" id={id} data-gate data-state="idle">
+  <div class="gate" data-requires-js>
+    <div class="gate__head">
+      <button type="button" class="gate__check" role="checkbox" aria-checked="false" data-start aria-describedby={`${id}-sub`}>
+        <span class="gate__box" aria-hidden="true"><span class="gate__spin"></span><svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 4.8"></path></svg></span>
+        <span class="gate__text">
+          <span class="gate__title" data-label>Verify you're human</span>
+          <span class="gate__sub" id={`${id}-sub`} data-sub>Runs a short proof-of-work in your browser. About a second.</span>
+        </span>
+      </button>
+      <span class="gate__side">
+        <span class="gate__tag label">Proof of work<br />SHA-256 · {bits} bits</span>
+        <button type="button" class="link-btn gate__action" data-cancel hidden>Cancel</button>
+        <button type="button" class="link-btn gate__action" data-forget hidden>Forget</button>
+      </span>
+    </div>
+    <div class="gate__bar" role="progressbar" aria-label="Verification progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-progress>
+      <span data-bar></span><i class="gate__expected" aria-hidden="true"></i>
+    </div>
+    <dl class="gate__stats">
+      <div><dt class="label">Hashes</dt><dd data-hashes>0</dd></div>
+      <div><dt class="label">Rate</dt><dd data-rate>—</dd></div>
+      <div><dt class="label">Threads</dt><dd data-threads>—</dd></div>
+      <div><dt class="label">Time</dt><dd data-time>0.00 s</dd></div>
+    </dl>
+    <p class="gate__readout" aria-hidden="true" data-stats>sha256(salt || 01 || n) == check · n &lt; 2^{bits}</p>
+  </div>
+
+  <dl class="channels" data-fields>
+    <div class="channel channel--email" data-email-row>
+      <dt class="label">Email</dt>
+      <dd class="channel__value" data-email-value>••••••@roshandash.com</dd>
+      <dd class="channel__act">
+        <button type="button" class="chip-btn" disabled data-locked><Icon name="lock" />Locked</button>
+        <button type="button" class="chip-btn" hidden data-copy><Icon name="copy" /><span data-copy-label>Copy</span></button>
+        <a class="btn btn--primary btn--sm" hidden data-mailto href="#"><span>Write</span><Icon name="arrow-right" /></a>
+      </dd>
+    </div>
+    {SOCIALS.map((s) => (
+      <div class="channel">
+        <dt class="label">{s.label}</dt>
+        <dd class="channel__value"><a class="ext-link" href={s.href} rel="me noopener">{HANDLES[s.label] ?? s.handle}<Icon name="arrow-up-right" /></a></dd>
+      </div>
+    ))}
+  </dl>
+  <noscript><p class="channels__note">Turn on JavaScript to reveal the address&nbsp;— or reach me on GitHub or LinkedIn.</p></noscript>
+  <p class="sr-only" aria-live="polite" data-live></p>
+</div>
+
+<style>
+  .contact-card { display: grid; gap: 28px; }
+
+  /* ---- gate ---- */
+  .gate { border: 1px solid var(--rule-2); background: var(--bg-raised); }
+  .gate__head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 18px 18px 16px; }
+  .gate__check { display: inline-flex; align-items: center; gap: 14px; min-height: 44px; text-align: left; }
+  .gate__check:disabled { cursor: default; }
+  .gate__box {
+    position: relative; flex: none;
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    border: 1.5px solid var(--line-ui);
+    transition: border-color var(--dur-2) linear, background-color var(--dur-3) linear, border-radius 160ms linear;
+  }
+  .gate__check:not(:disabled):hover .gate__box { border-color: var(--signal-ui); }
+  .gate__box svg {
+    width: 16px; height: 16px;
+    fill: none; stroke: var(--on-signal); stroke-width: 2.4;
+    stroke-dasharray: 24; stroke-dashoffset: 24;
+    transition: stroke-dashoffset 400ms var(--ease-out) 100ms;
+  }
+  .gate__spin {
+    position: absolute; inset: -1.5px;
+    border: 1.5px solid transparent; border-top-color: var(--signal-ui); border-right-color: var(--signal-ui);
+    border-radius: 50%;
+    opacity: 0;
+  }
+  .contact-card[data-state='verifying'] .gate__box { border-radius: 50%; border-color: var(--rule-2); }
+  .contact-card[data-state='verifying'] .gate__spin { opacity: 1; animation: spin 700ms linear infinite; }
+  .contact-card[data-state='verified'] .gate__box { background: var(--signal-ui); border-color: var(--signal-ui); }
+  .contact-card[data-state='verified'] .gate__box svg { stroke-dashoffset: 0; }
+  .contact-card[data-state='error'] .gate__box { border-style: dashed; }
+  .contact-card[data-state='unsupported'] .gate__box { border-color: var(--fg-4); }
+  .gate__text { display: flex; flex-direction: column; }
+  .gate__title { font-size: 16px; font-weight: 550; letter-spacing: -0.015em; }
+  .gate__sub { margin-top: 2px; font-size: 13px; line-height: 1.4; color: var(--fg-3); }
+  .gate__side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+  .gate__tag { text-align: right; }
+  .gate__action { font-size: 13px; }
+
+  .gate__bar { position: relative; height: 2px; background: var(--rule); }
+  .gate__bar [data-bar] {
+    position: absolute; inset: 0;
+    background: var(--signal-ui);
+    transform-origin: left; transform: scaleX(var(--p, 0));
+    transition: transform 120ms linear;
+  }
+  .gate__expected { position: absolute; left: 50%; top: -4px; width: 1px; height: 10px; background: var(--fg-3); }
+  .contact-card[data-state='verified'] .gate__bar [data-bar] { transform: scaleX(1); }
+
+  .gate__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--rule); }
+  .gate__stats > div { display: grid; gap: 4px; min-width: 0; padding: 12px 16px 14px; }
+  .gate__stats > div + div { border-left: 1px solid var(--rule); }
+  .gate__stats dd { font-size: 15px; font-weight: 550; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .contact-card[data-cached] .gate__stats { display: none; }
+
+  .gate__readout {
+    padding: 10px 16px 12px;
+    border-top: 1px solid var(--rule);
+    font: 12.5px/1.5 var(--font-mono, monospace);
+    color: var(--fg-3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .gate__readout :global(b) { font-weight: 400; color: var(--signal-text); }
+  .gate__readout :global(.icon--inline) { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; }
+
+  /* ---- channels ---- */
+  .channels { border-bottom: 1px solid var(--rule); }
+  .channel,
+  .channels :global(.channel) {
+    display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: var(--gutter);
+    min-height: 64px; padding: 14px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .channels :global(.channel__value) { min-width: 0; font-size: 18px; font-weight: 550; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+  .channels :global(.channel__value a:hover) { color: var(--signal-text); }
+  .channel__act { display: flex; gap: 8px; align-items: center; }
+  .channels__note { font-size: 14px; color: var(--fg-2); }
+
+  @media (width < 640px) {
+    .gate__tag { display: none; }
+    .gate__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gate__stats > div:nth-child(3) { border-left: 0; }
+    .gate__stats > div:nth-child(n + 3) { border-top: 1px solid var(--rule); }
+    .gate__readout { white-space: normal; overflow-wrap: anywhere; }
+    .channel,
+    .channels :global(.channel) { grid-template-columns: 72px minmax(0, 1fr); row-gap: 10px; }
+    .channel__act { grid-column: 2 / -1; }
+    .channels :global(.channel__value) { font-size: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .contact-card[data-state='verifying'] .gate__spin { animation: none; border-color: transparent; border-top-color: var(--signal-ui); }
+  }
+</style>
+
+<script>
+  import sealedJson from '@/data/contact.sealed.json';
+  import { parseSealed, ContactError, type Contact } from '@/lib/contact/seal.ts';
+  import { solve, readCachedContact, writeCachedContact, clearCachedContact, type SolveProgress } from '@/scripts/contact/solver.ts';
+
+  const LABELS: Record<string, string> = { email: 'Email', phone: 'Phone', telegram: 'Telegram', whatsapp: 'WhatsApp', signal: 'Signal', calendar: 'Book a call', note: 'Note' };
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const count = new Intl.NumberFormat('en-US');
+  const apple = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  const MIN_VERIFYING_MS = 700;
+  // "→" isn't in the shipped font subsets, so readout arrows are the icon-set arrow (spec §2.3.4)
+  const ARROW = '<svg class="icon icon--inline" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" aria-hidden="true"><path d="M2 8h11M9.5 4.5 13 8l-3.5 3.5"></path></svg>';
+
+  const SUB = {
+    idle: 'Runs a short proof-of-work in your browser. About a second.',
+    verifying: 'Hashing in your browser.',
+    verified: 'Address decrypted on this device.',
+    cached: 'Verified earlier in this tab.',
+    cancelled: 'Cancelled. Run it again whenever you like.',
+    error: 'Something went wrong. Click to try again.',
+    sealed: "The sealed address didn't decrypt. Try again, or use LinkedIn below.",
+    unsupported: 'This check needs a secure connection (HTTPS).',
+  };
+
+  function href(field: string, value: string): string | null {
+    switch (field) {
+      case 'email': return `mailto:${value}`;
+      case 'phone': return `tel:${value}`;
+      case 'telegram': return `https://t.me/${value}`;
+      case 'whatsapp': return `https://wa.me/${value.replace(/\D/g, '')}`;
+      case 'signal': return value.startsWith('https://') ? value : null;
+      case 'calendar': return value;
+      default: return null;
+    }
+  }
+
+  // Decode-style reveal: random glyphs resolve left to right into the real text; "@" and "." stay put.
+  function scramble(el: HTMLElement, text: string) {
+    if (reduceMotion) { el.textContent = text; return; }
+    const glyphs = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    const start = performance.now();
+    const dur = 650;
+    const frame = (now: number) => {
+      const p = Math.min(1, (now - start) / dur);
+      const n = Math.floor(p * text.length);
+      let out = text.slice(0, n);
+      for (let i = n; i < text.length; i++) out += text[i] === '@' || text[i] === '.' ? text[i] : glyphs[(Math.random() * glyphs.length) | 0];
+      el.textContent = out;
+      if (p < 1) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+
+  const rate = (perSecond: number) => (perSecond >= 1e6 ? `${(perSecond / 1e6).toFixed(1)} MH/s` : `${Math.round(perSecond / 1e3)} kH/s`);
+  const seconds = (ms: number) => `${(ms / 1000).toFixed(2)} s`;
+
+  for (const gate of document.querySelectorAll<HTMLElement>('[data-gate]')) {
+    const sealed = parseSealed(sealedJson);
+    const $ = <T extends HTMLElement>(sel: string) => gate.querySelector<T>(sel)!;
+    const button = $<HTMLButtonElement>('[data-start]');
+    const label = $('[data-label]');
+    const sub = $('[data-sub]');
+    const progress = $('[data-progress]');
+    const bar = $('[data-bar]');
+    const stats = $('[data-stats]');
+    const live = $('[data-live]');
+    const cancel = $<HTMLButtonElement>('[data-cancel]');
+    const forget = $<HTMLButtonElement>('[data-forget]');
+    const cells = { hashes: $('[data-hashes]'), rate: $('[data-rate]'), threads: $('[data-threads]'), time: $('[data-time]') };
+    const emailValue = $('[data-email-value]');
+    const locked = $<HTMLButtonElement>('[data-locked]');
+    const copy = $<HTMLButtonElement>('[data-copy]');
+    const copyLabel = $('[data-copy-label]');
+    const mailto = $<HTMLAnchorElement>('[data-mailto]');
+    const idleReadout = stats.textContent ?? '';
+    const mask = emailValue.textContent ?? '';
+    let controller: AbortController | null = null;
+
+    const setProgress = (fraction: number) => {
+      bar.style.setProperty('--p', fraction.toFixed(4));
+      progress.setAttribute('aria-valuenow', String(Math.round(fraction * 100)));
+    };
+    const setState = (state: string, title: string, text: string) => {
+      gate.dataset.state = state;
+      label.textContent = title;
+      sub.textContent = text;
+      button.setAttribute('aria-checked', state === 'verifying' ? 'mixed' : state === 'verified' ? 'true' : 'false');
+      button.toggleAttribute('aria-busy', state === 'verifying');
+      cancel.hidden = state !== 'verifying';
+    };
+    const showProgress = (p: SolveProgress) => {
+      setProgress(Math.min(0.99, p.fraction));
+      cells.hashes.textContent = count.format(p.hashes);
+      cells.rate.textContent = p.hashRate ? rate(p.hashRate) : '—';
+      cells.threads.textContent = p.workers ? String(p.workers) : 'main';
+      cells.time.textContent = seconds(p.elapsedMs);
+      stats.textContent = `tested ${count.format(p.hashes)} of ${count.format(p.total)} (${Math.round(p.fraction * 100)}%) · expected ~50% · ${p.hashRate ? rate(p.hashRate) : '—'}`;
+    };
+    const reset = () => {
+      setProgress(0);
+      cells.hashes.textContent = '0';
+      cells.rate.textContent = '—';
+      cells.threads.textContent = '—';
+      cells.time.textContent = '0.00 s';
+      stats.textContent = idleReadout;
+    };
+
+    function render(contact: Contact, animate: boolean) {
+      const fields = gate.querySelector<HTMLElement>('[data-fields]')!;
+      for (const extra of fields.querySelectorAll('[data-extra]')) extra.remove();
+      let after: Element = gate.querySelector('[data-email-row]')!;
+      for (const [key, value] of Object.entries(contact)) {
+        if (!value) continue;
+        const link = href(key, value);
+        if (key === 'email') {
+          emailValue.replaceChildren();
+          const a = Object.assign(document.createElement('a'), { href: link ?? '#' });
+          emailValue.append(a);
+          if (animate) scramble(a, value); else a.textContent = value;
+          continue;
+        }
+        const row = document.createElement('div');
+        row.className = 'channel';
+        row.dataset.extra = '';
+        const dt = Object.assign(document.createElement('dt'), { className: 'label', textContent: LABELS[key] ?? key });
+        const dd = Object.assign(document.createElement('dd'), { className: 'channel__value' });
+        if (link) {
+          const a = Object.assign(document.createElement('a'), { href: link, textContent: value });
+          if (!link.startsWith('mailto:') && !link.startsWith('tel:')) a.rel = 'noopener';
+          dd.append(a);
+        } else dd.textContent = value;
+        row.append(dt, dd);
+        after.after(row);
+        after = row;
+      }
+      mailto.href = `mailto:${contact.email}?subject=${encodeURIComponent('Hello from roshandash.com')}`;
+      copy.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(contact.email);
+          copyLabel.textContent = 'Copied';
+        } catch {
+          const target = emailValue.querySelector('a') ?? emailValue;
+          getSelection()?.selectAllChildren(target);
+          copyLabel.textContent = apple ? 'Press ⌘C' : 'Press Ctrl+C';
+        }
+        setTimeout(() => (copyLabel.textContent = 'Copy'), 2000);
+      };
+      locked.hidden = true;
+      copy.hidden = false;
+      mailto.hidden = false;
+      button.disabled = true;
+      setProgress(1);
+    }
+
+    function verifiedFromCache(contact: Contact) {
+      gate.toggleAttribute('data-cached', true);
+      setState('verified', 'Verified', SUB.cached);
+      stats.textContent = 'cached · decrypted locally';
+      forget.hidden = false;
+      render(contact, false);
+    }
+
+    const cached = readCachedContact(sealed);
+    if (cached) verifiedFromCache(cached);
+
+    forget.addEventListener('click', () => {
+      clearCachedContact(sealed);
+      gate.removeAttribute('data-cached');
+      forget.hidden = true;
+      button.disabled = false;
+      for (const extra of gate.querySelectorAll('[data-extra]')) extra.remove();
+      emailValue.textContent = mask;
+      locked.hidden = false;
+      copy.hidden = true;
+      mailto.hidden = true;
+      reset();
+      setState('idle', "Verify you're human", SUB.idle);
+      live.textContent = 'Forgotten. The address is hidden again.';
+      button.focus();
+    });
+
+    cancel.addEventListener('click', () => controller?.abort());
+
+    async function start() {
+      if (gate.dataset.state === 'verifying' || gate.dataset.state === 'verified') return;
+      controller = new AbortController();
+      const began = performance.now();
+      reset();
+      setState('verifying', 'Verifying…', SUB.verifying);
+      live.textContent = 'Verifying. This takes about a second.';
+      try {
+        const result = await solve(sealed, { onProgress: showProgress, signal: controller.signal });
+        const wait = MIN_VERIFYING_MS - (performance.now() - began);
+        if (wait > 0 && !reduceMotion) await new Promise((resolve) => setTimeout(resolve, wait));
+        setProgress(1);
+        cells.hashes.textContent = count.format(result.hashes);
+        cells.time.textContent = seconds(result.ms);
+        writeCachedContact(sealed, result.contact);
+        stats.innerHTML = `n = <b>${count.format(result.nonce)}</b> ${ARROW} key = sha256(salt || 02 || n) ${ARROW} ${sealed.alg} ok · ${seconds(result.ms)}`;
+        setState('verified', 'Verified', SUB.verified);
+        live.textContent = 'Verified. Email address revealed.';
+        render(result.contact, true);
+      } catch (err) {
+        reset();
+        if (controller.signal.aborted) {
+          setState('idle', "Verify you're human", SUB.cancelled);
+          live.textContent = 'Verification cancelled.';
+        } else if (err instanceof ContactError && err.code === 'unsupported') {
+          setState('unsupported', "Can't verify here", SUB.unsupported);
+          button.disabled = true;
+          live.textContent = SUB.unsupported;
+        } else {
+          const sealedFailure = err instanceof ContactError && (err.code === 'decrypt-failed' || err.code === 'not-found');
+          setState('error', "Couldn't verify", sealedFailure ? SUB.sealed : SUB.error);
+          stats.textContent = `error: ${err instanceof ContactError ? err.code : 'unexpected'}`;
+          live.textContent = 'Verification failed. Try again.';
+        }
+      } finally {
+        controller = null;
+      }
+    }
+
+    button.addEventListener('click', start);
+    if (!cached && new URLSearchParams(location.search).get('verify') === '1') start();
+  }
+</script>

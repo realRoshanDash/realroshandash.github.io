@@ -1,0 +1,139 @@
+---
+/**
+ * Site header (design spec §4.2): the dash + name, primary navigation (Writing, About, Contact; the brand links
+ * home), the ⌘K search entry point, the theme toggle, and the numbered menu below 1024px.
+ * Navigation points at a section's page once it is built, and at its section on the home page until then.
+ */
+import Icon from '@/components/ui/Icon.astro';
+import ThemeToggle from '@/components/layout/ThemeToggle.astro';
+import MobileMenu from '@/components/layout/MobileMenu.astro';
+import { NAV, SITE } from '@/data/site';
+import { linkTo } from '@/lib/routes';
+
+interface Props {
+  /** Reading progress bar along the bottom edge (posts). */
+  progress?: boolean;
+}
+const { progress = false } = Astro.props;
+
+const path = Astro.url.pathname.replace(/\/?$/, '/');
+const items = NAV.map((item) => {
+  const href = linkTo(item.href, item.anchor);
+  return { label: item.label, href, current: href === item.href && path.startsWith(item.href) };
+});
+---
+
+<header class="site-header" id="top" data-header>
+  <div class="wrap g site-header__in">
+    <a class="brand" href="/" aria-label={`${SITE.name}, home`}>
+      <span class="brand__dash" aria-hidden="true"></span><span class="brand__name">{SITE.name}</span>
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      {items.map((item) => <a href={item.href} aria-current={item.current ? 'page' : undefined}>{item.label}</a>)}
+    </nav>
+    <div class="site-tools">
+      <button class="search-btn" type="button" data-open-palette aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+        <Icon name="search" /><span class="search-btn__label">Search</span>{' '}<kbd data-kbd>Ctrl K</kbd>
+      </button>
+      <ThemeToggle />
+      <button class="menu-btn" type="button" data-menu aria-expanded="false" aria-controls="mobile-menu">Menu</button>
+    </div>
+  </div>
+  {progress && <span class="read-progress" aria-hidden="true"></span>}
+</header>
+<MobileMenu items={items} homeCurrent={path === '/'} />
+
+<style>
+  .site-header {
+    position: sticky; top: 0; z-index: var(--z-header);
+    height: var(--nav-h);
+    background: var(--bg);
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--dur-2) linear;
+  }
+  .site-header[data-scrolled] { border-bottom-color: var(--rule); }
+  .site-header__in { height: 100%; align-items: center; }
+
+  .brand {
+    grid-column: 1 / 4; justify-self: start;
+    display: inline-flex; align-items: center; gap: 10px;
+    min-height: 44px;
+    font-size: 15px; font-weight: 650; letter-spacing: -0.02em;
+  }
+  .brand__dash {
+    width: 20px; height: 5px;
+    background: var(--signal);
+    transform: translateY(1px);
+    transform-origin: left center;
+    transition: transform var(--dur-4) var(--ease-out);
+  }
+  .brand:hover .brand__dash { transform: translateY(1px) scaleX(1.6); }
+
+  .site-nav { grid-column: 5 / 10; display: flex; gap: clamp(20px, 2.4vw, 36px); }
+  .site-nav a {
+    position: relative;
+    display: inline-flex; align-items: center;
+    min-height: 44px;
+    font-size: 14px; font-weight: 500; color: var(--fg-2);
+    transition: color var(--dur-2) linear;
+  }
+  .site-nav a:hover { color: var(--fg); }
+  .site-nav a::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 9px;
+    height: 1px; background: var(--fg);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform var(--dur-4) var(--ease-out);
+  }
+  .site-nav a:hover::after { transform: scaleX(1); }
+  .site-nav a[aria-current='page'] { color: var(--fg); }
+  /* the active mark is a small dash */
+  .site-nav a[aria-current='page']::after {
+    left: 50%; right: auto; width: 14px; height: 3px; margin-left: -7px;
+    background: var(--signal-ui); transform: none;
+  }
+
+  .site-tools { grid-column: 10 / 13; justify-self: end; display: flex; align-items: center; gap: 8px; }
+  .search-btn {
+    position: relative;
+    height: 36px; display: inline-flex; align-items: center; gap: 10px;
+    padding: 0 5px 0 12px;
+    border: 1px solid var(--rule-2);
+    font-size: 13px; font-weight: 500; color: var(--fg-2);
+    transition: border-color var(--dur-2) linear, color var(--dur-2) linear;
+  }
+  .search-btn::before { content: ''; position: absolute; inset: -4px; }
+  .search-btn:hover { border-color: var(--fg); color: var(--fg); }
+  .search-btn :global(.icon) { width: 14px; height: 14px; }
+  .menu-btn { display: none; }
+
+  .read-progress {
+    position: absolute; left: 0; right: 0; bottom: -1px;
+    height: 2px; background: var(--signal-ui);
+    transform-origin: left; transform: scaleX(var(--progress, 0));
+  }
+
+  @media (width < 1024px) {
+    .site-nav, .search-btn kbd { display: none; }
+    /* the label stays in the accessible name */
+    .search-btn__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .brand { grid-column: 1 / 5; }
+    .site-tools { grid-column: 5 / 9; }
+    .search-btn { width: 40px; height: 40px; padding: 0; justify-content: center; }
+    .search-btn :global(.icon) { width: 16px; height: 16px; }
+    .menu-btn {
+      display: inline-flex; align-items: center;
+      height: 40px; padding: 0 14px;
+      border: 1px solid var(--rule-2);
+      font-size: 13px; font-weight: 550;
+    }
+  }
+  @media (width < 640px) {
+    .brand { grid-column: 1 / 3; }
+    .site-tools { grid-column: 3 / 5; gap: 6px; }
+  }
+  :global(html.menu-open) { overflow: hidden; }
+</style>
+
+<script>
+  import '@/scripts/header.ts';
+</script>

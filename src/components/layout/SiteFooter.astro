@@ -1,0 +1,103 @@
+---
+/**
+ * Site footer (design spec §4.6): index, profiles + RSS, colophon with the layout-grid toggle, Singapore local
+ * time, and the name as a wordmark fitted to the content width in pure CSS (100cqi / its measured ink width).
+ */
+import Icon from '@/components/ui/Icon.astro';
+import { NAV, SITE, SOCIALS } from '@/data/site';
+import { linkTo } from '@/lib/routes';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="g site-footer__top">
+      <div class="site-footer__brand">
+        <a class="brand" href="/"><span class="brand__dash" aria-hidden="true"></span>{SITE.name}</a>
+        <p>Software engineer in {SITE.location}&nbsp;— backend systems, with AI agents in the loop.</p>
+      </div>
+      <nav class="site-footer__col site-footer__index" aria-label="Footer">
+        <span class="label">Index</span>
+        <a href="/">Home</a>
+        {NAV.map((item) => <a href={linkTo(item.href, item.anchor)}>{item.label}</a>)}
+      </nav>
+      <div class="site-footer__col site-footer__elsewhere">
+        <span class="label">Elsewhere</span>
+        {SOCIALS.map((s) => <a class="ext-link" href={s.href} rel="me noopener">{s.label}<Icon name="arrow-up-right" /></a>)}
+        <a class="ext-link" href="/rss.xml">RSS<Icon name="rss" /></a>
+      </div>
+      <div class="site-footer__col site-footer__colophon">
+        <span class="label">Colophon</span>
+        <p>Set in Inter and JetBrains Mono. Twelve columns, one signal colour: #FF5A1F. Built with Astro.</p>
+        <button type="button" class="link-btn" data-grid-toggle aria-pressed="false"><span data-grid-label>Show layout grid</span></button>
+      </div>
+      <div class="site-footer__col site-footer__time">
+        <span class="label">Local time</span>
+        <p class="site-footer__clock"><span>{SITE.location}</span><span class="clock" data-clock="hm">UTC+08:00</span></p>
+      </div>
+    </div>
+
+    <p class="site-footer__mark" aria-hidden="true">{SITE.name}</p>
+
+    <div class="g site-footer__bottom">
+      <span>© {year} {SITE.name}</span>
+      <span>No cookies. No tracking.</span>
+      <a class="top" href="#top">Back to top <span aria-hidden="true">↑</span></a>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer { padding-top: 28px; border-top: 1px solid var(--rule-2); background: var(--bg); }
+  .site-footer .wrap { container-type: inline-size; } /* enables cqi for the wordmark */
+  .site-footer__top { row-gap: 32px; }
+
+  .site-footer__brand { grid-column: 1 / 5; display: flex; flex-direction: column; gap: 10px; }
+  .site-footer__brand p { max-width: 24em; font-size: 14px; line-height: 1.5; color: var(--fg-2); }
+  .brand { display: inline-flex; align-items: center; gap: 10px; width: max-content; min-height: 32px; font-size: 15px; font-weight: 650; letter-spacing: -0.02em; }
+  .brand__dash { width: 20px; height: 5px; background: var(--signal); transform: translateY(1px); }
+
+  .site-footer__col { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; font-size: 14px; }
+  .site-footer__col .label { margin-bottom: 4px; }
+  .site-footer__col a { display: inline-flex; align-items: center; min-height: 32px; width: max-content; color: var(--fg-2); transition: color var(--dur-2) linear; }
+  .site-footer__col a:hover { color: var(--fg); }
+  .site-footer__index { grid-column: 5 / 7; }
+  .site-footer__elsewhere { grid-column: 7 / 9; }
+  .site-footer__colophon { grid-column: 9 / 11; }
+  .site-footer__colophon p { line-height: 1.5; color: var(--fg-2); }
+  .site-footer__time { grid-column: 11 / 13; }
+  .site-footer__clock { display: flex; justify-content: space-between; gap: 12px; width: 100%; color: var(--fg-2); }
+  .clock { display: inline-block; min-inline-size: 9ch; text-align: right; color: var(--fg); font-weight: 550; font-variant-numeric: tabular-nums; }
+
+  /* "Roshan Dash" is 5.418em of ink; -0.0543em puts the ink of R on the column line */
+  .site-footer__mark {
+    margin-top: clamp(56px, 8vw, 120px);
+    margin-left: -0.0543em;
+    font-size: calc(100cqi / 5.418);
+    font-weight: 700; letter-spacing: var(--tr-display); line-height: 0.8;
+    white-space: nowrap;
+    font-variation-settings: var(--opsz-display);
+  }
+
+  .site-footer__bottom { margin-top: 22px; padding: 18px 0 max(28px, env(safe-area-inset-bottom)); border-top: 1px solid var(--rule); row-gap: 8px; }
+  .site-footer__bottom > * { grid-column: span 4; font-size: 13px; color: var(--fg-3); }
+  .site-footer__bottom .top { justify-self: end; display: inline-flex; gap: 6px; min-height: 24px; color: var(--fg); }
+
+  @media (width < 1024px) {
+    .site-footer__brand { grid-column: 1 / -1; }
+    .site-footer__index, .site-footer__elsewhere, .site-footer__colophon, .site-footer__time { grid-column: span 4; }
+    .site-footer__bottom > * { grid-column: span 4; }
+    .site-footer__bottom > :nth-child(2) { grid-column: 5 / 9; }
+    .site-footer__bottom .top { grid-column: 1 / -1; justify-self: start; }
+  }
+  @media (width < 640px) {
+    .site-footer__index, .site-footer__elsewhere { grid-column: span 2; }
+    .site-footer__colophon, .site-footer__time { grid-column: 1 / -1; }
+    .site-footer__bottom > *, .site-footer__bottom > :nth-child(2) { grid-column: 1 / -1; }
+  }
+</style>
+
+<script>
+  import '@/scripts/clock.ts';
+</script>

@@ -1,0 +1,41 @@
+---
+/**
+ * Fig. 02 — agents inside each stage of a change (design spec §4.14). Conceptual, HTML so it reflows.
+ * The loop row is what machines say, so it's set in mono.
+ */
+import Icon from '@/components/ui/Icon.astro';
+
+const STAGES = [
+  { name: 'Design', verbs: 'explore · specify' },
+  { name: 'Build', verbs: 'implement · test' },
+  { name: 'Ship', verbs: 'review · release' },
+];
+---
+
+<figure class="stages-fig" data-reveal="2" aria-labelledby="fig-02">
+  <ol class="stages ruled" role="list">
+    {STAGES.map((stage, i) => (
+      <li class="stage">
+        <span class="label">{String(i + 1).padStart(2, '0')}</span>
+        <h3 class="stage__name">{stage.name}</h3>
+        <p class="stage__verbs">{stage.verbs}</p>
+        <p class="stage__loop mono"><Icon name="loop" />plan · act · check</p>
+      </li>
+    ))}
+  </ol>
+  <figcaption class="label" id="fig-02">Fig. 02 — Agents inside each stage of a change. Conceptual.</figcaption>
+</figure>
+
+<style>
+  .stages-fig { grid-column: 1 / -1; display: grid; gap: 14px; }
+  .stages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stage { display: flex; flex-direction: column; gap: 10px; min-height: 200px; padding: 20px 20px 24px; }
+  .stage__name { margin-top: 2px; font-size: clamp(26px, 2.4vw, 36px); line-height: 1; font-weight: 700; letter-spacing: -0.035em; font-variation-settings: var(--opsz-display); }
+  .stage__verbs { font-size: 15px; color: var(--fg-2); }
+  .stage__loop { margin-top: auto; display: inline-flex; align-items: center; gap: 8px; color: var(--fg-3); }
+  .stage__loop :global(.icon) { width: 14px; height: 14px; color: var(--signal-ui); }
+  @media (width < 640px) {
+    .stages { grid-template-columns: 1fr; }
+    .stage { min-height: auto; }
+  }
+</style>

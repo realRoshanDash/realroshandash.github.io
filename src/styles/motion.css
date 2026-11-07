@@ -1,0 +1,53 @@
+/* =========================================================================
+   Motion (design spec v2, §3). Restrained, kinetic, always optional.
+   Nothing is hidden by CSS waiting for JS, an IntersectionObserver or fonts:
+   the server-rendered page is the final state. Only transform and opacity animate.
+   ========================================================================= */
+:root {
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);     /* expo-out: entrances, draws, underlines, nudges */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* wipes, grid draw, theme crossfade, sheet */
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);      /* exits */
+  --dur-1: 80ms;    /* press */
+  --dur-2: 160ms;   /* colour and border hovers, VT exit */
+  --dur-3: 240ms;   /* menu sheet, palette in, VT enter */
+  --dur-4: 450ms;   /* underline draw, arrow nudge, theme icon */
+  --dur-5: 600ms;   /* reveals, card top-rule draw */
+  --dur-6: 900ms;   /* hero dash draw */
+  --dur-7: 1100ms;  /* grid draw */
+}
+
+@keyframes grid-draw { from { transform: scaleY(0); } }
+@keyframes dash-draw { from { transform: scaleX(0); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes vt-out { to { opacity: 0; } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Load sequence: first page view of a session only (the head script adds html.intro-seen afterwards).
+   Every element is already in its final position; these only draw decorative marks. */
+html:not(.intro-seen) .gridlines i { animation: grid-draw var(--dur-7) var(--ease-in-out) both; animation-delay: calc(var(--i, 0) * 30ms); }
+html:not(.intro-seen) .hero__name .line--dash::after { animation: dash-draw var(--dur-6) var(--ease-out) 120ms both; }
+html:not(.intro-seen) .hero .crop { animation: fade-in 400ms linear 300ms both; }
+
+/* Page transitions: native cross-document View Transitions (no client router) */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: var(--dur-2) var(--ease-in) both vt-out; }
+::view-transition-new(root) { animation: var(--dur-3) var(--ease-out) both vt-in; }
+.site-header { view-transition-name: site-header; }
+::view-transition-group(site-header),
+::view-transition-old(site-header),
+::view-transition-new(site-header) { animation: none; }
+::view-transition-group(*) { animation-duration: 420ms; animation-timing-function: var(--ease-out); }
+:root.theme-switching::view-transition-old(root) { animation: 280ms var(--ease-in-out) both vt-out; }
+:root.theme-switching::view-transition-new(root) { animation: 280ms var(--ease-in-out) both fade-in; }
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}

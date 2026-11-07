@@ -1,0 +1,78 @@
+---
+/**
+ * Numbered section header (design spec §4.10): thin numeral, bold title, and an aside with the description and
+ * a route link — the real path of the page it opens, a dotted leader, the label and an arrow — plus RSS.
+ */
+import Icon from '@/components/ui/Icon.astro';
+import { lsbStyle } from '@/lib/optical';
+
+interface Props {
+  num: string;
+  title: string;
+  /** id of the <h2>, for aria-labelledby on the section */
+  id: string;
+  desc?: string;
+  /** The page this section continues on, e.g. { route: '/blog', label: 'All writing', href: '/blog/' } */
+  link?: { route: string; label: string; href: string };
+  rss?: string;
+}
+const { num, title, id, desc, link, rss } = Astro.props;
+---
+
+<header class="sec-head g" data-reveal="0">
+  <p class="sec-head__num t-numeral" aria-hidden="true" style={lsbStyle(num, 'thin')}>{num}</p>
+  <h2 class="sec-head__title t-display" id={id} style={lsbStyle(title)}>{title}</h2>
+  {(desc || link || rss) && (
+    <div class="sec-head__aside">
+      {desc && <p class="sec-head__desc">{desc}</p>}
+      {(link || rss) && (
+        <p class="sec-head__links">
+          {link && (
+            <a class="route-link" href={link.href}>
+              <span class="route">{link.route}</span><span class="leader" aria-hidden="true"></span><span class="text">{link.label}<Icon name="arrow-right" /></span>
+            </a>
+          )}
+          {rss && <a class="arrow-link sec-head__rss" href={rss}>RSS feed<Icon name="rss" /></a>}
+        </p>
+      )}
+    </div>
+  )}
+  <slot />
+</header>
+
+<style>
+  .sec-head {
+    align-items: end;
+    row-gap: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule-2);
+    margin-bottom: var(--section-head-gap);
+  }
+  .sec-head__num { grid-column: 1 / 3; align-self: start; }
+  .sec-head__title { grid-column: 3 / 9; }
+  .sec-head__aside { grid-column: 9 / 13; display: grid; gap: 16px; padding-bottom: 6px; }
+  .sec-head__desc { max-width: 30em; font-size: 15px; line-height: 1.5; color: var(--fg-2); }
+  .sec-head__links { display: flex; align-items: baseline; gap: 20px; }
+  .route-link { flex: 1; display: flex; align-items: baseline; gap: 10px; min-height: 32px; }
+  .route-link .route { font: 12.5px var(--font-mono, monospace); color: var(--fg-3); transition: color var(--dur-2) linear; }
+  .route-link .leader {
+    flex: 1; min-width: 24px; height: 1px; align-self: center;
+    background: repeating-linear-gradient(90deg, var(--rule-2) 0 1px, transparent 1px 5px);
+  }
+  .route-link .text { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 550; }
+  .route-link :global(.icon) { width: 14px; height: 14px; transition: transform var(--dur-4) var(--ease-out); }
+  .route-link:hover .route { color: var(--signal-text); }
+  .route-link:hover :global(.icon), .route-link:focus-visible :global(.icon) { transform: translateX(4px); }
+
+  @media (width < 1024px) {
+    .sec-head__aside { grid-column: 3 / 9; }
+  }
+  @media (width < 640px) {
+    .sec-head__num {
+      grid-column: 1 / -1;
+      font-size: 12px; font-weight: 500; letter-spacing: 0.08em; line-height: 1;
+      margin-left: 0;
+    }
+    .sec-head__title, .sec-head__aside { grid-column: 1 / -1; }
+  }
+</style>

@@ -1,0 +1,116 @@
+---
+/**
+ * Fig. 03 — an illustrative agent session (design spec §4.14): a mounted-print plate, dark in both themes.
+ * Labelled ILLUSTRATIVE on the element and in the caption: it shows the shape of the loop, not a real session.
+ */
+import Icon from '@/components/ui/Icon.astro';
+
+type Turn =
+  | { who: 'you'; text: string }
+  | { who: 'agent'; plan: string; calls: { name: string; arg: string; out?: string; ok?: boolean }[] };
+
+interface Props {
+  turns?: Turn[];
+  caption?: string;
+  file?: string;
+}
+const {
+  file = 'agent-session.log',
+  caption = 'Fig. 03 — An illustrative agent loop: plan, act, check, then review. Not a real session.',
+  turns = [
+    { who: 'you', text: 'Add idempotency keys to POST /orders. Keep the API compatible.' },
+    {
+      who: 'agent',
+      plan: 'read handler → add key store → add tests',
+      calls: [
+        { name: 'read_file', arg: 'OrderController.java' },
+        { name: 'edit_file', arg: 'OrderController.java', out: '+24 −3' },
+        { name: 'run_tests', arg: 'orders', out: '42 passed', ok: true },
+        { name: 'open_pr', arg: '"Idempotency keys for /orders"', out: 'draft' },
+      ],
+    },
+    { who: 'you', text: 'Reviewing the diff.' },
+  ],
+} = Astro.props;
+---
+
+<figure class="transcript-fig" data-reveal="3" aria-labelledby="fig-03">
+  <div class="transcript" data-plate>
+    <div class="transcript__bar">
+      <span>{file}</span>
+      <span class="badge transcript__badge"><span class="badge__hatch" aria-hidden="true"></span>Illustrative</span>
+    </div>
+    <div class="transcript__body">
+      {turns.map((turn) => turn.who === 'you' ? (
+        <div class="turn turn--you"><span class="turn__who">You</span><p class="turn__text">{turn.text}</p></div>
+      ) : (
+        <div class="turn turn--agent">
+          <span class="turn__who">Agent</span>
+          <div class="turn__work">
+            <p class="turn__plan">
+              <span class="call__kind">plan</span>{' '}
+              {turn.plan.split(' → ').map((step, i) => (
+                <>{i > 0 && <Icon name="arrow-right" class="turn__arrow" />}{step}</>
+              ))}
+            </p>
+            {turn.calls.map((call) => (
+              <p class="call">
+                <span class="call__kind">tool</span>
+                <span class="call__name">{call.name}</span>
+                <span class="call__arg">{call.arg}</span>
+                <span class:list={['call__out', { 'call__out--ok': call.ok }]}>{call.out ?? ''}</span>
+              </p>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+  <figcaption class="label" id="fig-03">{caption}</figcaption>
+</figure>
+
+<style>
+  .transcript-fig { display: grid; gap: 14px; }
+  .transcript {
+    background: var(--plate); color: var(--plate-fg);
+    border: 1px solid var(--plate-edge);
+    font: 13px/1.7 var(--font-mono, monospace);
+  }
+  .transcript__bar {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    height: 42px; padding: 0 16px;
+    border-bottom: 1px solid var(--plate-rule);
+    color: var(--plate-fg-2); font-size: 12.5px;
+  }
+  /* the badge sits on the plate in both themes */
+  .transcript__badge { color: var(--plate-fg-2); border-color: var(--plate-rule); font-family: var(--font-sans, sans-serif); }
+  .transcript__badge .badge__hatch {
+    border-color: var(--plate-rule);
+    background: repeating-linear-gradient(-45deg, rgb(242 241 236 / 0.34) 0 1px, transparent 1px 4px);
+  }
+  .transcript__body { display: grid; gap: 10px; padding: 16px; }
+  .turn { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; }
+  .turn__who { font: 500 12px/1.6 var(--font-sans, sans-serif); letter-spacing: 0.08em; text-transform: uppercase; color: var(--plate-fg-3); padding-top: 2px; }
+  .turn--you .turn__text { font: 400 15px/1.5 var(--font-sans, sans-serif); letter-spacing: -0.011em; }
+  .turn__work { display: grid; gap: 6px; min-width: 0; }
+  .turn__plan { color: var(--plate-fg-2); }
+  .turn__plan :global(.turn__arrow) { display: inline-block; width: 12px; height: 12px; margin: 0 8px; vertical-align: -1px; color: var(--plate-fg-3); }
+  .call {
+    display: grid; grid-template-columns: 40px 104px minmax(0, 1fr) auto; gap: 12px;
+    padding: 6px 10px;
+    border-left: 2px solid var(--signal);
+    background: rgb(242 241 236 / 0.03);
+  }
+  .call__kind { color: var(--plate-fg-3); }
+  .call__name { color: var(--plate-fg); }
+  .call__arg { color: var(--plate-fg-2); overflow-wrap: anywhere; }
+  .call__out { color: var(--plate-fg-2); text-align: right; }
+  .call__out--ok { color: var(--plate-gain); }
+  @media (width < 640px) {
+    .turn { grid-template-columns: 1fr; gap: 4px; }
+    /* two lines per call: kind · name · result, then the argument */
+    .call { grid-template-columns: 40px minmax(0, 1fr) auto; row-gap: 0; }
+    .call__out { grid-column: 3; grid-row: 1; }
+    .call__arg { grid-column: 2 / -1; grid-row: 2; }
+  }
+</style>

@@ -1,0 +1,62 @@
+---
+/** Full-screen numbered menu under the header, below 1024px (design spec §4.3). Driven by header.ts. */
+import Icon from '@/components/ui/Icon.astro';
+import ThemeToggle from '@/components/layout/ThemeToggle.astro';
+import { SITE, SOCIALS } from '@/data/site';
+
+interface Props {
+  items: { label: string; href: string; current: boolean }[];
+  homeCurrent: boolean;
+}
+const { items, homeCurrent } = Astro.props;
+const all = [{ label: 'Home', href: '/', current: homeCurrent }, ...items];
+---
+
+<div class="mobile-menu" id="mobile-menu" hidden data-mobile-menu>
+  <nav aria-label="Menu">
+    <ol class="mobile-menu__list" role="list">
+      {all.map((item, i) => (
+        <li><a href={item.href} aria-current={item.current ? 'page' : undefined}><span>{String(i + 1).padStart(2, '0')}</span>{item.label}</a></li>
+      ))}
+    </ol>
+  </nav>
+  <div class="mobile-menu__foot">
+    <div class="mobile-menu__tools">
+      <button class="btn mobile-menu__search" type="button" data-open-palette><Icon name="search" />Search</button>
+      <ThemeToggle class="mobile-menu__theme" />
+    </div>
+    <p class="mobile-menu__links">
+      {SOCIALS.map((s) => (
+        <a class="ext-link" href={s.href} rel="me noopener">{s.label}<Icon name="arrow-up-right" /></a>
+      ))}
+      <a class="ext-link" href="/rss.xml">RSS<Icon name="rss" /></a>
+    </p>
+    <p class="label">{SITE.location}<span aria-hidden="true"> · </span><span class="clock" data-clock>UTC+08:00</span></p>
+  </div>
+</div>
+
+<style>
+  .mobile-menu {
+    position: fixed; inset: var(--nav-h) 0 0 0; z-index: var(--z-sheet);
+    display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
+    overflow-y: auto;
+    padding: 8px var(--margin) max(24px, env(safe-area-inset-bottom));
+    background: var(--bg);
+  }
+  .mobile-menu[hidden] { display: none; }
+  .mobile-menu__list a {
+    display: grid; grid-template-columns: 36px 1fr; align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 40px; font-weight: 650; letter-spacing: -0.04em; line-height: 1;
+  }
+  .mobile-menu__list a span { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  .mobile-menu__list a[aria-current='page'] span { color: var(--signal-text); }
+  .mobile-menu__foot { display: grid; gap: 16px; }
+  .mobile-menu__tools { display: flex; gap: 8px; }
+  .mobile-menu__search { flex: 1; justify-content: flex-start; gap: 10px; }
+  .mobile-menu__tools :global(.mobile-menu__theme) { width: 48px; height: 48px; }
+  .mobile-menu__links { display: flex; flex-wrap: wrap; gap: 4px 24px; font-size: 15px; }
+  .mobile-menu__links a { min-height: 44px; }
+  .clock { display: inline-block; min-inline-size: 9ch; font-variant-numeric: tabular-nums; }
+</style>
