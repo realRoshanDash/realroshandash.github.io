@@ -3,6 +3,7 @@ import { Image } from 'astro:assets';
 import Base from '@/layouts/Base.astro';
 import { SITE, SOCIALS } from '@/data/site';
 import cutout from '@/assets/portrait-cutout.png';
+import ContactGate from '@/components/ContactGate.astro';
 
 const tape = ['Java', 'Distributed systems', 'System design', 'Databases', 'AI agents', 'Agentic workflows', 'Backend engineering', 'IIT Guwahati', 'Singapore'];
 const year = new Date().getFullYear();
@@ -109,13 +110,18 @@ const year = new Date().getFullYear();
     </section>
 
     <section id="contact" class="section wrap contact" aria-labelledby="contact-title">
-      <p class="mono kicker">Contact</p>
-      <h2 id="contact-title" class="big">Let's <span class="serif"><em>talk</em></span>.</h2>
-      <p class="sub">The quickest way to reach me is LinkedIn. A verified contact card — unlocked by a quick human check — is coming in the next update.</p>
-      <div class="ctas">
-        {SOCIALS.map((s) => (
-          <a class="btn btn-ghost" href={s.href} rel="me noopener" target="_blank">{s.label} <span aria-hidden="true">↗</span></a>
-        ))}
+      <div class="contact-grid">
+        <div>
+          <p class="mono kicker">Contact</p>
+          <h2 id="contact-title" class="big">Let's <span class="serif"><em>talk</em></span>.</h2>
+          <p class="sub">Collaborations, engineering conversations, or just a hello. Verify you're human and my email appears — a one-second check that keeps scrapers out.</p>
+          <div class="ctas">
+            {SOCIALS.map((s) => (
+              <a class="btn btn-ghost" href={s.href} rel="me noopener" target="_blank">{s.label} <span aria-hidden="true">↗</span></a>
+            ))}
+          </div>
+        </div>
+        <ContactGate />
       </div>
     </section>
   </main>
@@ -221,6 +227,8 @@ const year = new Date().getFullYear();
   @media (max-width: 860px) { .card, .card-lg, .card-md, .card-wide { grid-column: span 12; } }
 
   .contact { text-align: left; }
+  .contact-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: end; }
+  @media (max-width: 860px) { .contact-grid { grid-template-columns: 1fr; } }
   .big { font-size: clamp(3.2rem, 11vw, 9rem); max-width: none; letter-spacing: -0.06em; }
   .contact .sub { margin-top: 1.25rem; max-width: 40rem; }
 

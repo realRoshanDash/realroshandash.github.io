@@ -1,0 +1,198 @@
+---
+/**
+ * Captcha-gated contact card. The details ship only as ciphertext (src/data/contact.sealed.json);
+ * the visitor's browser solves a short SHA-256 proof-of-work to derive the key and decrypt them.
+ * Regenerate the sealed card with `npm run seal-contact` (see README).
+ */
+interface Props {
+  id?: string;
+}
+const { id = 'contact-gate' } = Astro.props;
+---
+
+<div class="gate" id={id} data-gate data-state="idle">
+  <div class="gate-head">
+    <p class="mono gate-kicker"><span class="gate-dot" aria-hidden="true"></span>Human check</p>
+    <p class="mono gate-meta">Proof-of-work · no tracking</p>
+  </div>
+
+  <div class="gate-body" data-locked>
+    <p class="gate-masked" aria-hidden="true">••••••••@roshandash.com</p>
+    <button type="button" class="gate-btn" data-start aria-describedby={`${id}-hint`}>
+      <span class="gate-box" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg></span>
+      <span data-label>Verify you're human</span>
+    </button>
+    <div class="gate-progress" role="progressbar" aria-label="Verification progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden data-progress>
+      <span class="gate-bar" data-bar></span>
+    </div>
+    <p class="mono gate-stats" data-stats hidden></p>
+    <p class="gate-hint" id={`${id}-hint`}>Your browser solves a tiny puzzle (about a second) to unlock my email. It keeps scrapers out — nothing is tracked.</p>
+  </div>
+
+  <div class="gate-card" data-card hidden>
+    <p class="mono gate-ok"><span aria-hidden="true">✓</span> Verified</p>
+    <dl class="gate-fields" data-fields></dl>
+    <div class="gate-actions">
+      <a class="gate-action primary" data-mailto href="#">Email me <span aria-hidden="true">→</span></a>
+      <button type="button" class="gate-action" data-copy>Copy email</button>
+    </div>
+  </div>
+
+  <p class="sr-only" aria-live="polite" data-live></p>
+</div>
+
+<style>
+  .gate { position: relative; max-width: 34rem; padding: 1.5rem; border: 1px solid var(--line-strong); border-radius: var(--radius); background: linear-gradient(180deg, rgb(255 255 255 / 0.035), rgb(255 255 255 / 0.01)); box-shadow: 0 30px 80px -40px rgb(0 0 0 / 0.8); overflow: hidden; }
+  .gate::before { content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; background: linear-gradient(120deg, rgb(200 245 80 / 0.5), transparent 30%, transparent 70%, rgb(200 245 80 / 0.25)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0; transition: opacity 0.6s; pointer-events: none; }
+  .gate[data-state='verifying']::before, .gate[data-state='verified']::before { opacity: 1; }
+  .gate-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem 1rem; margin-bottom: 1.25rem; }
+  .gate-head p { white-space: nowrap; }
+  .gate-kicker, .gate-meta { margin: 0; color: var(--muted); display: inline-flex; align-items: center; gap: 0.5rem; }
+  .gate-kicker { color: var(--text-2); }
+  .gate-dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--muted); transition: background 0.3s; }
+  .gate[data-state='verifying'] .gate-dot { background: #f5b84c; }
+  .gate[data-state='verified'] .gate-dot { background: var(--accent); }
+  .gate-masked { margin: 0 0 1.1rem; font-family: var(--mono); font-size: clamp(1rem, 2.6vw, 1.25rem); color: var(--text-2); letter-spacing: 0.02em; }
+  .gate-btn { display: inline-flex; align-items: center; gap: 0.8rem; padding: 0.85rem 1.2rem 0.85rem 0.9rem; border: 1px solid var(--line-strong); border-radius: 12px; background: rgb(255 255 255 / 0.04); color: var(--text); font: 600 1rem/1 var(--sans); cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.2s var(--ease-out); }
+  .gate-btn:hover:not(:disabled) { border-color: var(--accent); background: rgb(200 245 80 / 0.06); }
+  .gate-btn:active:not(:disabled) { transform: scale(0.98); }
+  .gate-btn:disabled { cursor: progress; opacity: 0.85; }
+  .gate-box { display: grid; place-items: center; width: 1.4rem; height: 1.4rem; border: 1.5px solid var(--text-2); border-radius: 6px; transition: border-color 0.2s, background 0.2s; }
+  .gate-box svg { width: 0.9rem; height: 0.9rem; fill: none; stroke: var(--accent-ink); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 16; stroke-dashoffset: 16; transition: stroke-dashoffset 0.4s var(--ease-out); }
+  .gate[data-state='verifying'] .gate-box { border-color: transparent; border-top-color: var(--accent); border-right-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .gate[data-state='verified'] .gate-box { background: var(--accent); border-color: var(--accent); }
+  .gate[data-state='verified'] .gate-box svg { stroke-dashoffset: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .gate-progress { height: 3px; margin-top: 1.1rem; border-radius: 3px; background: rgb(255 255 255 / 0.08); overflow: hidden; }
+  .gate-bar { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.12s linear; }
+  .gate-stats { margin: 0.6rem 0 0; color: var(--muted); }
+  .gate-hint { margin: 1rem 0 0; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+  .gate-card { animation: card-in 0.6s var(--ease-out); }
+  @keyframes card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .gate-ok { margin: 0 0 1rem; color: var(--accent); }
+  .gate-fields { display: grid; gap: 0.75rem; margin: 0; }
+  /* rows are created by the script below, so they need :global() to escape Astro's style scoping */
+  .gate-fields :global(div) { display: grid; gap: 0.2rem; }
+  .gate-fields :global(dt) { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .gate-fields :global(dd) { margin: 0; font-size: clamp(1.15rem, 3vw, 1.5rem); font-weight: 600; letter-spacing: -0.015em; word-break: break-all; }
+  .gate-fields :global(a) { color: var(--text); text-decoration: none; background: linear-gradient(var(--accent), var(--accent)) 0 100% / 0 2px no-repeat; transition: background-size 0.35s var(--ease-out); }
+  .gate-fields :global(a:hover) { background-size: 100% 2px; }
+  .gate-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.25rem; }
+  .gate-action { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.7rem 1.1rem; border: 1px solid var(--line-strong); border-radius: 999px; background: transparent; color: var(--text); font: 600 0.95rem/1 var(--sans); text-decoration: none; cursor: pointer; transition: border-color 0.2s, transform 0.2s var(--ease-out); }
+  .gate-action:hover { border-color: var(--text-2); transform: translateY(-1px); }
+  .gate-action.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+</style>
+
+<script>
+  import sealedJson from '@/data/contact.sealed.json';
+  import { parseSealed, ContactError, type Contact } from '@/lib/contact/seal.ts';
+  import { solve, readCachedContact, writeCachedContact } from '@/scripts/contact/solver.ts';
+
+  const LABELS: Record<string, string> = { email: 'Email', phone: 'Phone', telegram: 'Telegram', whatsapp: 'WhatsApp', signal: 'Signal', calendar: 'Book a call', note: 'Note' };
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function href(field: string, value: string): string | null {
+    switch (field) {
+      case 'email': return `mailto:${value}`;
+      case 'phone': return `tel:${value}`;
+      case 'telegram': return `https://t.me/${value}`;
+      case 'whatsapp': return `https://wa.me/${value.replace(/\D/g, '')}`;
+      case 'signal': return value.startsWith('https://') ? value : null;
+      case 'calendar': return value;
+      default: return null;
+    }
+  }
+
+  // Decode-style reveal: random glyphs resolve left to right into the real text.
+  function scramble(el: HTMLElement, text: string) {
+    if (reduceMotion) { el.textContent = text; return; }
+    const glyphs = 'abcdefghijklmnopqrstuvwxyz0123456789@._-#%&';
+    const start = performance.now();
+    const dur = 650;
+    const frame = (now: number) => {
+      const p = Math.min(1, (now - start) / dur);
+      const n = Math.floor(p * text.length);
+      let out = text.slice(0, n);
+      for (let i = n; i < text.length; i++) out += text[i] === '@' || text[i] === '.' ? text[i] : glyphs[(Math.random() * glyphs.length) | 0];
+      el.textContent = out;
+      if (p < 1) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+
+  function render(gate: HTMLElement, contact: Contact, animate: boolean) {
+    const fields = gate.querySelector<HTMLElement>('[data-fields]')!;
+    fields.replaceChildren();
+    for (const [key, value] of Object.entries(contact)) {
+      if (!value) continue;
+      const row = document.createElement('div');
+      const dt = document.createElement('dt');
+      dt.textContent = LABELS[key] ?? key;
+      const dd = document.createElement('dd');
+      const link = href(key, value);
+      const target = link ? Object.assign(document.createElement('a'), { href: link }) : dd;
+      if (link) {
+        if (!link.startsWith('mailto:') && !link.startsWith('tel:')) { target.setAttribute('target', '_blank'); target.setAttribute('rel', 'noopener'); }
+        dd.append(target);
+      }
+      if (animate) scramble(target as HTMLElement, value); else target.textContent = value;
+      row.append(dt, dd);
+      fields.append(row);
+    }
+    gate.querySelector<HTMLAnchorElement>('[data-mailto]')!.href = `mailto:${contact.email}?subject=${encodeURIComponent('Hello from roshandash.com')}`;
+    const copy = gate.querySelector<HTMLButtonElement>('[data-copy]')!;
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText(contact.email); copy.textContent = 'Copied ✓'; }
+      catch { copy.textContent = contact.email; }
+      setTimeout(() => (copy.textContent = 'Copy email'), 2200);
+    };
+    gate.querySelector<HTMLElement>('[data-locked]')!.hidden = true;
+    gate.querySelector<HTMLElement>('[data-card]')!.hidden = false;
+    gate.dataset.state = 'verified';
+  }
+
+  for (const gate of document.querySelectorAll<HTMLElement>('[data-gate]')) {
+    const sealed = parseSealed(sealedJson);
+    const cached = readCachedContact(sealed);
+    if (cached) { render(gate, cached, false); continue; }
+
+    const button = gate.querySelector<HTMLButtonElement>('[data-start]')!;
+    const label = gate.querySelector<HTMLElement>('[data-label]')!;
+    const progress = gate.querySelector<HTMLElement>('[data-progress]')!;
+    const bar = gate.querySelector<HTMLElement>('[data-bar]')!;
+    const stats = gate.querySelector<HTMLElement>('[data-stats]')!;
+    const live = gate.querySelector<HTMLElement>('[data-live]')!;
+
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      gate.dataset.state = 'verifying';
+      label.textContent = 'Verifying…';
+      progress.hidden = false;
+      stats.hidden = false;
+      live.textContent = 'Verifying, this takes about a second.';
+      try {
+        const result = await solve(sealed, {
+          onProgress: (p) => {
+            const pct = Math.min(99, Math.round(p.fraction * 100));
+            bar.style.width = `${Math.max(4, pct)}%`;
+            progress.setAttribute('aria-valuenow', String(pct));
+            stats.textContent = `${(p.hashRate / 1e6).toFixed(1)} MH/s · ${p.workers || 1} thread${p.workers === 1 ? '' : 's'} · ${(p.hashes / 1e6).toFixed(2)}M hashes`;
+          },
+        });
+        bar.style.width = '100%';
+        writeCachedContact(sealed, result.contact);
+        stats.textContent = `Solved in ${(result.ms / 1000).toFixed(2)} s · ${(result.hashes / 1e6).toFixed(2)}M hashes`;
+        live.textContent = 'Verified. My email is now shown.';
+        setTimeout(() => render(gate, result.contact, true), reduceMotion ? 0 : 280);
+      } catch (err) {
+        gate.dataset.state = 'idle';
+        button.disabled = false;
+        label.textContent = 'Try again';
+        progress.hidden = true;
+        const code = err instanceof ContactError ? err.code : 'error';
+        stats.textContent = code === 'unsupported' ? 'This page needs HTTPS to verify.' : 'Something went wrong — please try again.';
+        live.textContent = stats.textContent;
+      }
+    });
+  }
+</script>
