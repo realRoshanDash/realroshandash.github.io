@@ -4,7 +4,7 @@ Source for [roshandash.com](https://roshandash.com), the personal site of Roshan
 engineer in Singapore. It has long-form writing, short notes, and a contact card that is only
 shown after a quick proof-of-work captcha.
 
-[![CI](https://github.com/roshandash411/roshandash411.github.io/actions/workflows/ci.yml/badge.svg)](https://github.com/roshandash411/roshandash411.github.io/actions/workflows/ci.yml)
+[![CI](https://github.com/realRoshanDash/roshandash411.github.io/actions/workflows/ci.yml/badge.svg)](https://github.com/realRoshanDash/roshandash411.github.io/actions/workflows/ci.yml)
 
 ## Stack
 
@@ -40,8 +40,8 @@ GitHub Actions builds and deploys each commit to roshandash.com within a couple 
 
 1. Create a token on GitHub: **Settings → Developer settings → Personal access tokens →
    Fine-grained tokens → Generate new token**.
-   - Resource owner: `roshandash411`
-   - Repository access: **Only select repositories** → `roshandash411/roshandash411.github.io`
+   - Resource owner: `realRoshanDash`
+   - Repository access: **Only select repositories** → `realRoshanDash/roshandash411.github.io`
    - Repository permissions: **Contents → Read and write**. GitHub adds *Metadata → Read-only*
      on its own. Grant nothing else.
    - Expiration: 90 days is a sensible default. Make a new token when it expires.
@@ -222,7 +222,8 @@ git add src/data/contact.sealed.json && git commit -m "contact: update card" && 
   every push and pull request. On `master` it deploys `dist/` to **GitHub Pages**
   (*Settings → Pages → Source: GitHub Actions*, custom domain `roshandash.com`, HTTPS enforced).
   Rerun a deploy from the Actions tab if needed.
-- **DNS** (Cloudflare): `roshandash.com` and `www` are CNAMEs to `roshandash411.github.io`.
+- **DNS** (Cloudflare): `roshandash.com` is a CNAME to `realroshandash.github.io` (flattened at the apex);
+  `www` redirects to the apex with a Cloudflare redirect rule.
   Leave the MX/TXT records alone — they carry email.
 - **Old URLs** from the 2021 site redirect via small static pages in `public/blog/` (a canonical
   link and an instant refresh, no `noindex`). They point at `/blog/`; when a restored post is

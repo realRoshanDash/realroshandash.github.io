@@ -18,7 +18,8 @@ interface Props {
 }
 const { id = 'contact-gate' } = Astro.props;
 const bits = sealed.difficulty;
-const HANDLES: Record<string, string> = { GitHub: 'roshandash411', LinkedIn: 'in/roshan-dash' };
+// Display overrides; everything else shows the handle from SOCIALS in site.ts.
+const HANDLES: Record<string, string> = { LinkedIn: 'in/roshan-dash' };
 // The idle subtitle is the longest of the gate's subtitles; the head reserves its height in every state (CSS below).
 const IDLE_SUB = 'Runs a short proof-of-work in your browser. About a\u00a0second.';
 ---

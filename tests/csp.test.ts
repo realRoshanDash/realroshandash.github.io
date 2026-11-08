@@ -166,7 +166,7 @@ describe('applyCsp', () => {
         '<link rel="stylesheet" href="/_astro/index.css"><script type="module" src="/_astro/page.js"></script>',
       '<picture><source type="image/avif" srcset="/_astro/a_1.avif 640w, /_astro/a_2.avif 960w" sizes="100vw">' +
         '<img src="https://roshandash.com/_astro/a_2.webp" srcset="/_astro/a_1.webp 640w,/_astro/a_2.webp 960w" alt=""></picture>' +
-        '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt=""><a href="https://github.com/roshandash411">GitHub</a>' +
+        '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt=""><a href="https://github.com/realRoshanDash">GitHub</a>' +
         '<form action="mailto:someone"></form><iframe src="about:blank" title="x"></iframe>' +
         '<figure data-csp="frame-src https://www.youtube-nocookie.com"><iframe src="https://www.youtube-nocookie.com/embed/abc" title="Talk"></iframe></figure>',
     );

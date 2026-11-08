@@ -80,7 +80,7 @@ describe('displayRoute', () => {
   });
 
   test('other origins read as host + path', () => {
-    assert.equal(displayRoute('https://github.com/roshandash411'), 'github.com/roshandash411');
+    assert.equal(displayRoute('https://github.com/realRoshanDash'), 'github.com/realRoshanDash');
     assert.equal(displayRoute('https://www.linkedin.com/in/roshan-dash'), 'linkedin.com/in/roshan-dash');
   });
 

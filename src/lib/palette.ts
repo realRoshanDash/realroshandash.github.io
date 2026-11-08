@@ -189,7 +189,7 @@ export function resultCount(n: number, ms?: number): string {
 
 /**
  * How a URL reads in the palette's route column: site paths without the trailing slash ("/blog", "/#writing",
- * "/"), other origins without the scheme ("github.com/roshandash411").
+ * "/"), other origins without the scheme ("github.com/realRoshanDash").
  */
 export function displayRoute(url: string, origin = 'https://roshandash.com'): string {
   let parsed: URL;
