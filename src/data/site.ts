@@ -19,7 +19,7 @@ export const SITE = {
   alumni: 'IIT Guwahati',
   expertise: ['Java', 'Distributed systems', 'Databases', 'System design', 'Backend engineering', 'AI agents', 'Agentic workflows'],
   interests: ['Reading', 'Photography', 'Travel'],
-  repo: 'realRoshanDash/roshandash411.github.io',
+  repo: 'realRoshanDash/realroshandash.github.io',
 } as const;
 
 /** The portrait's alt text (design spec §6.1), wherever the photo appears: the hero plate and the About plate. */

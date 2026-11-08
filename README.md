@@ -4,7 +4,7 @@ Source for [roshandash.com](https://roshandash.com), the personal site of Roshan
 engineer in Singapore. It has long-form writing, short notes, and a contact card that is only
 shown after a quick proof-of-work captcha.
 
-[![CI](https://github.com/realRoshanDash/roshandash411.github.io/actions/workflows/ci.yml/badge.svg)](https://github.com/realRoshanDash/roshandash411.github.io/actions/workflows/ci.yml)
+[![CI](https://github.com/realRoshanDash/realroshandash.github.io/actions/workflows/ci.yml/badge.svg)](https://github.com/realRoshanDash/realroshandash.github.io/actions/workflows/ci.yml)
 
 ## Stack
 
@@ -41,7 +41,7 @@ GitHub Actions builds and deploys each commit to roshandash.com within a couple 
 1. Create a token on GitHub: **Settings → Developer settings → Personal access tokens →
    Fine-grained tokens → Generate new token**.
    - Resource owner: `realRoshanDash`
-   - Repository access: **Only select repositories** → `realRoshanDash/roshandash411.github.io`
+   - Repository access: **Only select repositories** → `realRoshanDash/realroshandash.github.io`
    - Repository permissions: **Contents → Read and write**. GitHub adds *Metadata → Read-only*
      on its own. Grant nothing else.
    - Expiration: 90 days is a sensible default. Make a new token when it expires.
@@ -225,6 +225,10 @@ git add src/data/contact.sealed.json && git commit -m "contact: update card" && 
 - **DNS** (Cloudflare): `roshandash.com` is a CNAME to `realroshandash.github.io` (flattened at the apex);
   `www` redirects to the apex with a Cloudflare redirect rule.
   Leave the MX/TXT records alone — they carry email.
+- **User site.** The repository is named `realroshandash.github.io` (GitHub wants a user site's
+  repository name in lowercase), so it is the account's user site and `realroshandash.github.io`
+  redirects to `roshandash.com`. Any other repository on the account that turns on GitHub Pages
+  without a domain of its own is therefore served at `roshandash.com/<repo>/`.
 - **Old URLs** from the 2021 site redirect via small static pages in `public/blog/` (a canonical
   link and an instant refresh, no `noindex`). They point at `/blog/`; when a restored post is
   published, point its stub's canonical and refresh at the post instead.
@@ -290,3 +294,7 @@ scripts/                new-entry.mjs (scaffolds), seal-contact.mjs (contact car
 The 2021 VuePress site is kept at the tag `legacy-vuepress` (`git checkout legacy-vuepress`).
 Its three posts were restored as drafts in `src/content/blog/`. Hosting moved from Netlify to
 GitHub Pages in November 2026.
+Later that month the GitHub account was renamed from `roshandash411` to `realRoshanDash`, and this
+repository from `roshandash411.github.io` to `realroshandash.github.io`, making it the user site.
+GitHub redirects the old names; never create a repository called `roshandash411.github.io`, as that
+would break those redirects.

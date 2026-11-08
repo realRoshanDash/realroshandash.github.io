@@ -11,7 +11,7 @@
 
 backend:
   name: github
-  repo: realRoshanDash/roshandash411.github.io
+  repo: realRoshanDash/realroshandash.github.io
   branch: master
   # Sign in with a fine-grained personal access token (README.md → "Publishing").
   # OAuth would need an extra auth server, so it's off.
